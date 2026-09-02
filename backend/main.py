@@ -6,7 +6,10 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes.health import router as health_router
 from backend.api.routes.diagnosis import router as diagnosis_router
+from backend.api.routes.pest import router as pest_router
+from backend.api.routes.weather import router as weather_router
 
+from backend.chat_route import router as chat_router
 
 # --------------------------------------------------
 # PATHS
@@ -29,6 +32,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(chat_router)
 
 # --------------------------------------------------
 # CORS
@@ -63,6 +67,8 @@ app.mount(
 
 app.include_router(health_router)
 app.include_router(diagnosis_router)
+app.include_router(pest_router)
+app.include_router(weather_router)
 
 
 # --------------------------------------------------
