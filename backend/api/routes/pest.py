@@ -2,9 +2,10 @@ from fastapi import (
     APIRouter,
     UploadFile,
     File,
+    Form,
     HTTPException,
+    Depends,
 )
-
 import os
 import uuid
 import json
@@ -12,6 +13,8 @@ import json
 from backend.services.pest_service import detect_pest
 from backend.database import SessionLocal
 from backend.models.diagnosis import Diagnosis
+from backend.models.user import User
+from backend.api.routes.auth import get_current_user
 
 
 # ============================================================
@@ -41,10 +44,16 @@ os.makedirs(
 # POST /pest/
 # ============================================================
 
+# Maximum file size: 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
 @router.post("/")
 async def pest_detection(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    language: str = Form("en"),
+    current_user: User = Depends(get_current_user),
 ):
+
 
     allowed_types = {
         "image/jpeg": ".jpg",
@@ -53,7 +62,7 @@ async def pest_detection(
     }
 
     # --------------------------------------------------------
-    # Validate image
+    # Validate image type
     # --------------------------------------------------------
 
     if file.content_type not in allowed_types:
@@ -64,6 +73,17 @@ async def pest_detection(
                 "Only JPG, PNG and WEBP "
                 "images are supported."
             ),
+        )
+
+    # --------------------------------------------------------
+    # Validate file size
+    # --------------------------------------------------------
+
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024*1024)}MB."
         )
 
     # --------------------------------------------------------
@@ -88,8 +108,6 @@ async def pest_detection(
     # --------------------------------------------------------
 
     try:
-
-        contents = await file.read()
 
         with open(
             file_path,
@@ -119,7 +137,8 @@ async def pest_detection(
     try:
 
         result = detect_pest(
-            file_path
+            file_path,
+            language=language,
         )
 
     except Exception as e:
@@ -141,14 +160,11 @@ async def pest_detection(
 # Save pest detection to history
 # --------------------------------------------------------
 
-    # --------------------------------------------------------
-    # Save pest detection to history
-    # --------------------------------------------------------
-
     db = SessionLocal()
 
     try:
         diagnosis_record = Diagnosis(
+            user_id=current_user.id,
             filename=filename,
             crop=result.get("crop"),
             problem_type="pest",

@@ -88,11 +88,25 @@ def extract_json(content: str) -> dict:
     )
 
 
+LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "mr": "Marathi",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "ml": "Malayalam",
+    "bn": "Bengali",
+    "gu": "Gujarati",
+    "pa": "Punjabi",
+}
+
+
 # ============================================================
 # PEST DETECTION
 # ============================================================
 
-def detect_pest(image_path: str) -> dict:
+def detect_pest(image_path: str, language: str = "en") -> dict:
 
     if not os.path.exists(image_path):
 
@@ -139,11 +153,13 @@ def detect_pest(image_path: str) -> dict:
         "image/jpeg"
     )
 
+    lang_name = LANGUAGE_NAMES.get(language, "English")
+
     # --------------------------------------------------------
     # Prompt
     # --------------------------------------------------------
 
-    prompt = """
+    prompt = f"""
 Analyze this crop image for visible pest infestation.
 
 You are an agricultural pest identification expert.
@@ -156,7 +172,7 @@ Do not use ```.
 
 The JSON must have EXACTLY these fields:
 
-{
+{{
   "crop": "string",
   "pest_detected": true,
   "pest_name": "string",
@@ -166,7 +182,7 @@ The JSON must have EXACTLY these fields:
   "explanation": "string",
   "recommended_action": ["string"],
   "needs_expert_review": false
-}
+}}
 
 Rules:
 
@@ -188,6 +204,9 @@ Rules:
 - Set needs_expert_review to true if the image is unclear.
 - Return all nine fields.
 - Return valid JSON only.
+
+LANGUAGE REQUIREMENT:
+All text values in the JSON (specifically 'crop', 'pest_name', 'symptoms', 'explanation', and 'recommended_action') MUST be provided in {lang_name}. Keep JSON keys in English as specified.
 """
 
     # --------------------------------------------------------
@@ -207,6 +226,7 @@ Rules:
                         "type": "text",
                         "text": prompt
                     },
+
 
                     {
                         "type": "image_url",

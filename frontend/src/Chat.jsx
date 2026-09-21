@@ -219,7 +219,7 @@ function MarkdownMessage({ text }) {
   );
 }
 
-function Chat({ history = [], currentDiagnosis = null, language = "en", contextRequest = null }) {
+function Chat({ history = [], currentDiagnosis = null, language = "en", contextRequest = null, labels = {} }) {
   const [sessions, setSessions] = useState([]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [input, setInput] = useState("");
@@ -229,6 +229,12 @@ function Chat({ history = [], currentDiagnosis = null, language = "en", contextR
   const textareaRef = useRef(null);
 
   const languageName = LANGUAGE_NAMES[language] || "English";
+  const starterQuestions = [
+    labels.starterDisease || STARTER_QUESTIONS[0],
+    labels.starterYellow || STARTER_QUESTIONS[1],
+    labels.starterPests || STARTER_QUESTIONS[2],
+    labels.starterGrowth || STARTER_QUESTIONS[3],
+  ];
 
   /* Load previous conversations from this browser. */
   useEffect(() => {
@@ -477,9 +483,9 @@ recommended_action: currentDiagnosis.recommended_action,
         <div className="chat-header">
           <div>
             <p className="chat-eyebrow">AGROMITR AI ASSISTANT</p>
-            <h1>Talk to your farming assistant.</h1>
+            <h1>{labels.chatTitle || "Talk to your farming assistant."}</h1>
             <p className="chat-subtitle">
-              Get practical crop-health guidance using your diagnosis history and selected language.
+              {labels.chatSubtitle || "Get practical crop-health guidance using your diagnosis history and selected language."}
             </p>
           </div>
           <div className="chat-status">
@@ -492,16 +498,16 @@ recommended_action: currentDiagnosis.recommended_action,
           <aside className="chat-sidebar">
             <div className="chat-sidebar-top">
               <div className="chat-sidebar-heading">
-                <strong>Chats</strong>
+                <strong>{labels.chats || "Chats"}</strong>
                 <span>{sessions.length}</span>
               </div>
               <button className="new-chat-button" onClick={createNewChat} disabled={loading}>
-                + New chat
+                + {labels.newChat || "New chat"}
               </button>
             </div>
 
             <div className="chat-history-list">
-              {sessions.map((session) => (
+                {sessions.map((session) => (
                 <button
                   key={session.id}
                   className={`saved-chat ${session.id === activeSessionId ? "active" : ""}`}
@@ -512,8 +518,7 @@ recommended_action: currentDiagnosis.recommended_action,
                   <span className="saved-chat-copy">
                     <strong>{session.title}</strong>
                     <small>
-                      {session.messages.filter((m) => m.role === "user").length} question
-                      {session.messages.filter((m) => m.role === "user").length === 1 ? "" : "s"}
+                      {session.messages.filter((m) => m.role === "user").length} {session.messages.filter((m) => m.role === "user").length === 1 ? (labels.question || "question") : (labels.questions || "questions")}
                     </small>
                   </span>
                   <span
@@ -529,9 +534,9 @@ recommended_action: currentDiagnosis.recommended_action,
             </div>
 
             <div className="chat-sidebar-card">
-              <div className="chat-sidebar-title"><span>💡</span>Try asking</div>
+              <div className="chat-sidebar-title"><span>💡</span>{labels.tryAsking || "Try asking"}</div>
               <div className="starter-list">
-                {STARTER_QUESTIONS.map((q) => (
+                {starterQuestions.map((q) => (
                   <button key={q} className="starter-question" onClick={() => sendMessage(q)} disabled={loading}>
                     <span>{q}</span><b>→</b>
                   </button>
@@ -540,12 +545,12 @@ recommended_action: currentDiagnosis.recommended_action,
             </div>
 
             <div className="chat-sidebar-card small">
-              <div className="chat-sidebar-title"><span>🌐</span>Language</div>
-              <p>Responses will be provided in <strong>{languageName}</strong>.</p>
+              <div className="chat-sidebar-title"><span>🌐</span>{labels.languageLabel || "Language"}</div>
+              <p>{labels.responsesIn || "Responses will be provided in"} <strong>{languageName}</strong>.</p>
             </div>
 
             <button className="clear-chat-button" onClick={clearCurrentChat} disabled={loading}>
-              ↻ Clear current chat
+              ↻ {labels.clearChat || "Clear current chat"}
             </button>
           </aside>
 
@@ -553,7 +558,7 @@ recommended_action: currentDiagnosis.recommended_action,
             <div className="chat-panel-top">
               <div className="assistant-identity">
                 <div className="assistant-avatar">🌱</div>
-                <div><strong>AgroMitr</strong><span>Crop & farm guidance</span></div>
+                <div><strong>AgroMitr</strong><span>{labels.cropGuidance || "Crop & farm guidance"}</span></div>
               </div>
               {history.length > 0 && (
                 <span className="context-badge">
@@ -588,7 +593,7 @@ recommended_action: currentDiagnosis.recommended_action,
                   <div className="message-avatar">🌱</div>
                   <div className="message-bubble assistant-bubble typing-bubble">
                     <div className="typing"><span /><span /><span /></div>
-                    <small>AgroMitr is thinking…</small>
+                    <small>{labels.thinking || "AgroMitr is thinking..."}</small>
                   </div>
                 </div>
               )}
@@ -609,7 +614,7 @@ recommended_action: currentDiagnosis.recommended_action,
                     sendMessage();
                   }
                 }}
-                placeholder="Ask AgroMitr anything about your crops…"
+                placeholder={labels.askAnything || "Ask AgroMitr anything about your crops..."}
                 rows={1}
                 disabled={loading}
               />
@@ -619,9 +624,9 @@ recommended_action: currentDiagnosis.recommended_action,
             </div>
 
             <div className="composer-hint">
-              <span>Enter to send</span>
-              <span>Shift + Enter for a new line</span>
-              <span>AI guidance • verify critical treatment decisions</span>
+              <span>{labels.enterSend || "Enter to send"}</span>
+              <span>{labels.shiftEnter || "Shift + Enter for a new line"}</span>
+              <span>{labels.aiGuidance || "AI guidance • verify critical treatment decisions"}</span>
             </div>
           </div>
         </div>

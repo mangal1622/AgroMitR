@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from backend.services.weather_service import (
@@ -6,6 +6,8 @@ from backend.services.weather_service import (
     search_locations,
     get_weather_by_coordinates,
 )
+from backend.models.user import User
+from backend.api.routes.auth import get_current_user
 
 
 router = APIRouter(
@@ -30,7 +32,8 @@ class CoordinatesRequest(BaseModel):
 
 @router.get("/search")
 async def search_weather_locations(
-    query: str
+    query: str,
+    current_user: User = Depends(get_current_user),
 ):
 
     query = query.strip()
@@ -70,7 +73,8 @@ async def search_weather_locations(
 
 @router.post("/")
 async def weather(
-    request: WeatherRequest
+    request: WeatherRequest,
+    current_user: User = Depends(get_current_user),
 ):
 
     location = request.location.strip()
@@ -122,7 +126,8 @@ async def weather(
 
 @router.post("/coordinates")
 async def weather_coordinates(
-    request: CoordinatesRequest
+    request: CoordinatesRequest,
+    current_user: User = Depends(get_current_user),
 ):
 
     try:

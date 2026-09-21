@@ -48,8 +48,10 @@ const WEATHER_CODES = {
   99: ["Thunderstorm with heavy hail", "⛈️"],
 };
 
-function weatherCode(code) {
-  return WEATHER_CODES[Number(code)] || ["Variable conditions", "🌤️"];
+function weatherCode(code, labels = {}) {
+  const [description, icon] = WEATHER_CODES[Number(code)] || [labels.weatherVariable || "Variable conditions", "🌤️"];
+  const key = `weather${Number(code)}`;
+  return [labels[key] || description, icon];
 }
 
 function formatDate(date) {
@@ -91,7 +93,8 @@ function getSuggestionData(history = []) {
   };
 }
 
-export default function Weather({ history = [] }) {
+export default function Weather({ history = [], labels = {} }) {
+  const label = (key, fallback) => labels[key] || fallback;
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -340,8 +343,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "warning",
         icon: "🌧️",
-        title: "Rain likely",
-        text: `Rain probability is ${rain[0]}% today. Avoid unnecessary irrigation and protect harvested produce.`,
+        title: label("rainLikely", "Rain likely"),
+        text: `${label("rainProbability", "Rain probability is")} ${rain[0]}% ${label("today", "today")}. ${label("protectProduce", "Avoid unnecessary irrigation and protect harvested produce.")}`,
       });
     }
 
@@ -349,10 +352,10 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "warning",
         icon: "🍃",
-        title: "Fungal-risk conditions",
+        title: label("fungalRisk", "Fungal-risk conditions"),
         text: farmData.hasFungalRiskHistory
-          ? "Your recent crop records include disease problems, and humid conditions can increase leaf-wetness and fungal pressure. Inspect affected crops closely."
-          : "High humidity can keep leaves wet for longer. Increase monitoring for fungal symptoms and improve airflow where possible.",
+          ? label("fungalHistory", "Your recent crop records include disease problems, and humid conditions can increase leaf-wetness and fungal pressure. Inspect affected crops closely.")
+          : label("fungalHumidity", "High humidity can keep leaves wet for longer. Increase monitoring for fungal symptoms and improve airflow where possible."),
       });
     }
 
@@ -360,8 +363,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "danger",
         icon: "☀️",
-        title: "Heat stress watch",
-        text: `Today's maximum temperature may reach ${Math.round(maxTemp[0])}°C. Check soil moisture and plan irrigation around the cooler part of the day.`,
+        title: label("heatStress", "Heat stress watch"),
+        text: `${label("maxTemperature", "Today's maximum temperature may reach")} ${Math.round(maxTemp[0])}°C. ${label("soilMoisture", "Check soil moisture and plan irrigation around the cooler part of the day.")}`,
       });
     }
 
@@ -369,8 +372,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "warning",
         icon: "💨",
-        title: "Strong wind",
-        text: `Wind may reach ${Math.round(wind[0])} km/h. Avoid spraying during strong winds and secure vulnerable plants.`,
+        title: label("strongWind", "Strong wind"),
+        text: `${label("windMayReach", "Wind may reach")} ${Math.round(wind[0])} km/h. ${label("avoidSpraying", "Avoid spraying during strong winds and secure vulnerable plants.")}`,
       });
     }
 
@@ -378,8 +381,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "info",
         icon: "🚜",
-        title: "Plan field work",
-        text: "Several of the next few days show elevated rain probability. Schedule spraying, harvesting and soil work during the clearest window.",
+        title: label("planFieldWork", "Plan field work"),
+        text: label("fieldWorkText", "Several of the next few days show elevated rain probability. Schedule spraying, harvesting and soil work during the clearest window."),
       });
     }
 
@@ -387,8 +390,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "info",
         icon: "🐛",
-        title: "Pest monitoring",
-        text: "Warm and humid conditions can support pest activity. Check the undersides of leaves and new growth during your next field inspection.",
+        title: label("pestMonitoring", "Pest monitoring"),
+        text: label("pestMonitoringText", "Warm and humid conditions can support pest activity. Check the undersides of leaves and new growth during your next field inspection."),
       });
     }
 
@@ -396,8 +399,8 @@ export default function Weather({ history = [] }) {
       alerts.push({
         level: "good",
         icon: "🌱",
-        title: "Good planning window",
-        text: "No major weather-based warning was detected for today. Continue routine crop monitoring and use the forecast to plan field work.",
+        title: label("goodPlanning", "Good planning window"),
+        text: label("goodPlanningText", "No major weather-based warning was detected for today. Continue routine crop monitoring and use the forecast to plan field work."),
       });
     }
 
@@ -410,10 +413,9 @@ export default function Weather({ history = [] }) {
         <div className="weather-hero">
           <div>
             <p className="weather-kicker">AGROMITR WEATHER INTELLIGENCE</p>
-            <h1>Plan your farm around the weather.</h1>
+            <h1>{labels.weatherTitle || "Plan your farm around the weather."}</h1>
             <p className="weather-subtitle">
-              Check local conditions, forecasted rain, heat and wind — then turn
-              them into practical farm preparation steps.
+              {labels.weatherSubtitle || "Check local conditions, forecasted rain, heat and wind, then turn them into practical farm preparation steps."}
             </p>
           </div>
 
@@ -430,11 +432,11 @@ export default function Weather({ history = [] }) {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") handleSearch();
                 }}
-                placeholder="Search your farm city or location"
-                aria-label="Search weather location"
+                placeholder={labels.searchLocation || "Search your farm city or location"}
+                aria-label={labels.searchLocation || "Search weather location"}
               />
               {loadingSuggestions && (
-                <span className="weather-input-status">Searching…</span>
+                <span className="weather-input-status">{label("searchingWeather", "Searching...")}</span>
               )}
             </div>
 
@@ -444,7 +446,7 @@ export default function Weather({ history = [] }) {
               onClick={handleSearch}
               disabled={weatherLoading}
             >
-              {weatherLoading ? "Checking…" : "Check Weather"}
+              {weatherLoading ? label("checkingWeather", "Checking...") : labels.checkWeather || "Check Weather"}
             </button>
           </div>
 
@@ -477,7 +479,7 @@ export default function Weather({ history = [] }) {
             onClick={useCurrentLocation}
             disabled={locationLoading}
           >
-            📍 {locationLoading ? "Finding your location…" : "Use my current location"}
+            📍 {locationLoading ? label("findingLocation", "Finding your location...") : labels.currentLocation || "Use my current location"}
           </button>
 
           {error && <div className="weather-error">⚠️ {error}</div>}
@@ -487,7 +489,7 @@ export default function Weather({ history = [] }) {
           <>
             <div className="weather-location-heading">
               <div>
-                <span>FARM LOCATION</span>
+                <span>{label("farmLocation", "FARM LOCATION")}</span>
                 <h2>{locationLabel(selectedPlace)}</h2>
                 <p>
                   Forecast updated for the local timezone · {weather.timezone}
@@ -500,22 +502,22 @@ export default function Weather({ history = [] }) {
                 onClick={() => fetchWeather(selectedPlace)}
                 disabled={weatherLoading}
               >
-                ↻ Refresh
+                ↻ {label("refresh", "Refresh")}
               </button>
             </div>
 
             <div className="weather-current-card">
               <div className="weather-current-main">
                 <div className="weather-current-icon">
-                  {weatherCode(weather.current?.weather_code)[1]}
+                  {weatherCode(weather.current?.weather_code, labels)[1]}
                 </div>
                 <div>
-                  <p>RIGHT NOW</p>
+                  <p>{label("rightNow", "RIGHT NOW")}</p>
                   <div className="weather-temperature">
                     {Math.round(weather.current?.temperature_2m ?? 0)}
                     <span>°C</span>
                   </div>
-                  <strong>{weatherCode(weather.current?.weather_code)[0]}</strong>
+                  <strong>{weatherCode(weather.current?.weather_code, labels)[0]}</strong>
                   <small>
                     Feels like {Math.round(weather.current?.apparent_temperature ?? 0)}°C
                   </small>
@@ -526,22 +528,22 @@ export default function Weather({ history = [] }) {
                 <div>
                   <span>💧</span>
                   <strong>{weather.current?.relative_humidity_2m ?? 0}%</strong>
-                  <small>Humidity</small>
+                    <small>{label("humidity", "Humidity")}</small>
                 </div>
                 <div>
                   <span>💨</span>
                   <strong>{Math.round(weather.current?.wind_speed_10m ?? 0)}</strong>
-                  <small>km/h wind</small>
+                    <small>km/h {label("wind", "wind")}</small>
                 </div>
                 <div>
                   <span>🌧️</span>
                   <strong>{weather.current?.precipitation ?? 0}</strong>
-                  <small>mm rain</small>
+                    <small>mm {label("rain", "rain")}</small>
                 </div>
                 <div>
                   <span>☁️</span>
                   <strong>{weather.current?.cloud_cover ?? 0}%</strong>
-                  <small>Cloud cover</small>
+                    <small>{label("cloudCover", "Cloud cover")}</small>
                 </div>
               </div>
             </div>
@@ -549,21 +551,22 @@ export default function Weather({ history = [] }) {
             <div className="weather-section-card">
               <div className="weather-section-heading">
                 <div>
-                  <p>FORECAST</p>
-                  <h2>7-day farm outlook</h2>
+                  <p>{label("forecast", "FORECAST")}</p>
+                  <h2>{label("outlook", "7-day farm outlook")}</h2>
                 </div>
-                <span>🌱 Farm planning</span>
+                <span>🌱 {label("farmPlanning", "Farm planning")}</span>
               </div>
 
               <div className="forecast-grid">
                 {weather.daily.time.map((date, index) => {
                   const [description, icon] = weatherCode(
-                    weather.daily.weather_code?.[index]
+                    weather.daily.weather_code?.[index],
+                    labels
                   );
 
                   return (
                     <div className="forecast-card" key={date}>
-                      <strong>{index === 0 ? "Today" : formatDate(date)}</strong>
+                      <strong>{index === 0 ? label("today", "Today") : formatDate(date)}</strong>
                       <span className="forecast-icon">{icon}</span>
                       <small>{description}</small>
 
@@ -589,10 +592,10 @@ export default function Weather({ history = [] }) {
               <div className="weather-section-card planning-card">
                 <div className="weather-section-heading">
                   <div>
-                    <p>AGROMITR ADVISORY</p>
-                    <h2>What should you prepare for?</h2>
+                    <p>{label("advisory", "AGROMITR ADVISORY")}</p>
+                    <h2>{label("prepare", "What should you prepare for?")}</h2>
                   </div>
-                  <span>{farmData.crops.length ? `${farmData.crops.length} crops tracked` : "General farm plan"}</span>
+                  <span>{farmData.crops.length ? `${farmData.crops.length} ${label("cropsTracked", "crops tracked")}` : label("generalFarmPlan", "General farm plan")}</span>
                 </div>
 
                 <div className="advisory-list">
@@ -609,15 +612,15 @@ export default function Weather({ history = [] }) {
               </div>
 
               <div className="weather-section-card weather-details-card">
-                <p className="weather-card-kicker">NEXT FIELD WINDOW</p>
-                <h2>Plan before you act.</h2>
+                <p className="weather-card-kicker">{label("nextFieldWindow", "NEXT FIELD WINDOW")}</p>
+                <h2>{label("planBeforeAct", "Plan before you act.")}</h2>
 
                 <div className="planning-check">
                   <span>🌧️</span>
                   <div>
-                    <strong>Rain</strong>
+                    <strong>{label("rain", "Rain")}</strong>
                     <small>
-                      {weather.daily.precipitation_probability_max?.[0] ?? 0}% today ·{" "}
+                      {weather.daily.precipitation_probability_max?.[0] ?? 0}% {label("today", "today")} ·{" "}
                       {weather.daily.precipitation_sum?.[0] ?? 0} mm forecast
                     </small>
                   </div>
@@ -626,9 +629,9 @@ export default function Weather({ history = [] }) {
                 <div className="planning-check">
                   <span>🌡️</span>
                   <div>
-                    <strong>Temperature</strong>
+                    <strong>{label("temperature", "Temperature")}</strong>
                     <small>
-                      {Math.round(weather.daily.temperature_2m_min?.[0] ?? 0)}°–{Math.round(weather.daily.temperature_2m_max?.[0] ?? 0)}°C today
+                      {Math.round(weather.daily.temperature_2m_min?.[0] ?? 0)}°–{Math.round(weather.daily.temperature_2m_max?.[0] ?? 0)}°C {label("today", "today")}
                     </small>
                   </div>
                 </div>
@@ -636,22 +639,21 @@ export default function Weather({ history = [] }) {
                 <div className="planning-check">
                   <span>💨</span>
                   <div>
-                    <strong>Wind</strong>
+                    <strong>{label("wind", "Wind")}</strong>
                     <small>
-                      Up to {Math.round(weather.daily.wind_speed_10m_max?.[0] ?? 0)} km/h today
+                      {label("upTo", "Up to")} {Math.round(weather.daily.wind_speed_10m_max?.[0] ?? 0)} km/h {label("today", "today")}
                     </small>
                   </div>
                 </div>
 
                 <div className="planning-date">
-                  Forecast for {formatLongDate(weather.daily.time?.[0])}
+                  {label("forecastFor", "Forecast for")} {formatLongDate(weather.daily.time?.[0])}
                 </div>
               </div>
             </div>
 
             <p className="weather-disclaimer">
-              Weather data is forecast information. Use local agricultural guidance
-              and field observations before making high-impact treatment decisions.
+              {label("forecastDisclaimer", "Weather data is forecast information. Use local agricultural guidance and field observations before making high-impact treatment decisions.")}
             </p>
           </>
         )}

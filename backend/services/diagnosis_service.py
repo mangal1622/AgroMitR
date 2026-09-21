@@ -56,6 +56,20 @@ Rules:
 """
 
 
+LANGUAGE_NAMES = {
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "mr": "Marathi",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "ml": "Malayalam",
+    "bn": "Bengali",
+    "gu": "Gujarati",
+    "pa": "Punjabi",
+}
+
+
 def encode_image(image_path: str) -> tuple[str, str]:
     """
     Convert a local image into base64 and determine its MIME type.
@@ -78,9 +92,26 @@ def encode_image(image_path: str) -> tuple[str, str]:
     return base64_image, mime_type
 
 
-def diagnose_image(image_path: str) -> dict:
+def diagnose_images(image_paths: list[str], language: str = "en") -> dict:
 
-    base64_image, mime_type = encode_image(image_path)
+    image_contents = []
+
+    for image_path in image_paths:
+        base64_image, mime_type = encode_image(image_path)
+        image_contents.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{mime_type};base64,{base64_image}"
+            },
+        })
+
+    lang_name = LANGUAGE_NAMES.get(language, "English")
+    lang_instruction = (
+        f"\n\nIMPORTANT LANGUAGE REQUIREMENT:\n"
+        f"All text values in the JSON (specifically 'crop', 'diagnosis', 'symptoms', "
+        f"'explanation', and 'recommended_action') MUST be provided in {lang_name}. "
+        f"Keep the JSON keys in English as specified, but translate all values into {lang_name}."
+    )
 
     response = client.chat.completions.create(
         model=MODEL,
@@ -88,7 +119,7 @@ def diagnose_image(image_path: str) -> dict:
         messages=[
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT,
+                "content": SYSTEM_PROMPT + lang_instruction,
             },
             {
                 "role": "user",
@@ -96,19 +127,12 @@ def diagnose_image(image_path: str) -> dict:
                     {
                         "type": "text",
                         "text": (
-                            "Analyze this crop image and provide "
-                            "the agricultural diagnosis as JSON."
+                            f"Analyze all provided crop images together. "
+                            f"Use the combined visual context and provide "
+                            f"the agricultural diagnosis in {lang_name} as JSON."
                         ),
                     },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": (
-                                f"data:{mime_type};base64,"
-                                f"{base64_image}"
-                            )
-                        },
-                    },
+                    *image_contents,
                 ],
             },
         ],
@@ -143,3 +167,7 @@ def diagnose_image(image_path: str) -> dict:
         }
 
     return result
+
+
+def diagnose_image(image_path: str, language: str = "en") -> dict:
+    return diagnose_images([image_path], language=language)

@@ -3,36 +3,55 @@ import axios from "axios";
 import "./App.css";
 import Weather from "./Weather";
 import Chat from "./Chat";
+import Auth from "./components/Auth";
+import LanguageSelect from "./components/LanguageSelect";
+import Settings from "./components/Settings";
+import { useTranslation } from "./i18n/LanguageContext";
 
 const API_URL = "http://127.0.0.1:8000";
 
-const getImageUrl = (filename) => {
-  if (!filename) return null;
-  return `${API_URL}/uploads/${filename}`;
+const getAuthToken = () => {
+  return localStorage.getItem("agromitr_access_token");
 };
 
+const getAuthHeaders = () => {
+  const token = getAuthToken();
 
-// ============================================================
-// LANGUAGES
-// ============================================================
+  return token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {};
+};
 
-const LANGUAGES = [
-  { code: "en", name: "English" },
-  { code: "hi", name: "हिन्दी" },
-  { code: "kn", name: "ಕನ್ನಡ" },
-  { code: "mr", name: "मराठी" },
-  { code: "ta", name: "தமிழ்" },
-  { code: "te", name: "తెలుగు" },
-  { code: "ml", name: "മലയാളം" },
-  { code: "bn", name: "বাংলা" },
-  { code: "gu", name: "ગુજરાતી" },
-  { code: "pa", name: "ਪੰਜਾਬੀ" },
-];
+axios.interceptors.request.use((config) => {
+  const token = getAuthToken();
 
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
 
-// ============================================================
-// UI TEXT
-// ============================================================
+  return config;
+});
+
+const getImageUrl = (filename) => {
+  if (!filename) return null;
+  const firstFilename = String(filename).split(",")[0].trim();
+  return `${API_URL}/uploads/${firstFilename}`;
+};
+
+const getAreaUnitLabel = (unit, pageText) => {
+  const labels = {
+    acre: pageText.acre,
+    hectare: pageText.hectare,
+    bigha: pageText.bigha,
+    guntha: pageText.guntha,
+    sqft: pageText.sqft,
+  };
+
+  return labels[unit] || unit || "";
+};
+
 
 const UI_TEXT = {
   en: {
@@ -82,497 +101,154 @@ const UI_TEXT = {
     noDiagnosis: "No diagnosis",
     dateUnavailable: "Date unavailable",
     severity: "Severity",
-    language: "Language",
-    translating: "Translating...",
-    systemOnline: "AI System Online",
     footer: "AgroMitR • Early Detection & Management",
   },
 
-  hi: {
-    smartCropHealth: "स्मार्ट फसल स्वास्थ्य",
-    heroTitle1: "फसल की समस्याओं का पता लगाएं",
-    heroTitle2: " फैलने से पहले।",
-    subtitle:
-      "फसल या पत्ते की तस्वीर अपलोड करें और हमारा AI दिखाई देने वाले रोगों, कीटों और पौधों के स्वास्थ्य संबंधी लक्षणों का विश्लेषण करेगा।",
-    cropDiagnosis: "फसल निदान",
-    uploadDescription: "प्रभावित पौधे की स्पष्ट तस्वीर अपलोड करें।",
-    uploadCrop: "फसल की तस्वीर अपलोड करें",
-    imageTypes: "JPG, PNG या WEBP",
-    chooseAnother: "दूसरी तस्वीर चुनें",
-    analyzeCrop: "फसल का विश्लेषण करें",
-    analyzing: "फसल का विश्लेषण हो रहा है...",
-    aiAnalysisComplete: "AI विश्लेषण पूरा",
-    diagnosisResult: "निदान परिणाम",
-    confidence: "विश्वास",
-    detectedCrop: "पहचानी गई फसल",
-    possibleCondition: "संभावित समस्या",
-    observedSymptoms: "देखे गए लक्षण",
-    noSymptoms: "कोई विशेष लक्षण नहीं मिले।",
-    aiExplanation: "AI व्याख्या",
-    noExplanation: "कोई व्याख्या उपलब्ध नहीं है।",
-    recommendedActions: "अनुशंसित कार्य",
-    noRecommendations: "कोई अनुशंसा उपलब्ध नहीं है।",
-    expertReview: "विशेषज्ञ समीक्षा आवश्यक",
-    expertDescription:
-      "कार्रवाई करने से पहले कृषि विशेषज्ञ से सलाह लेने पर विचार करें।",
-    savedDiagnosis: "सहेजा गया निदान",
-    diagnosisDetails: "निदान विवरण",
-    backHistory: "इतिहास पर वापस जाएं",
-    caseId: "केस ID",
-    expertRequired: "आवश्यक",
-    expertNotRequired: "आवश्यक नहीं",
-    yourRecords: "आपके रिकॉर्ड",
-    recentDiagnoses: "हाल के निदान",
-    case: "केस",
-    cases: "केस",
-    loadingHistory: "निदान इतिहास लोड हो रहा है...",
-    noDiagnoses: "अभी तक कोई निदान नहीं",
-    firstDiagnosis:
-      "अपना पहला निदान रिकॉर्ड बनाने के लिए फसल की तस्वीर अपलोड करें।",
-    unknown: "अज्ञात",
-    unknownCrop: "अज्ञात फसल",
-    unknownProblem: "अज्ञात समस्या",
-    noDiagnosis: "कोई निदान नहीं",
-    dateUnavailable: "तारीख उपलब्ध नहीं",
-    severity: "गंभीरता",
-    language: "भाषा",
-    translating: "अनुवाद हो रहा है...",
-    systemOnline: "AI सिस्टम ऑनलाइन",
-    footer: "AgroMitR • प्रारंभिक पहचान और प्रबंधन",
-  },
-
-  kn: {
-    smartCropHealth: "ಸ್ಮಾರ್ಟ್ ಬೆಳೆ ಆರೋಗ್ಯ",
-    heroTitle1: "ಬೆಳೆ ಸಮಸ್ಯೆಗಳನ್ನು ಪತ್ತೆಹಚ್ಚಿ",
-    heroTitle2: " ಹರಡುವ ಮೊದಲು.",
-    subtitle:
-      "ಬೆಳೆ ಅಥವಾ ಎಲೆಯ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ ಮತ್ತು ನಮ್ಮ AI ರೋಗಗಳು, ಕೀಟಗಳು ಮತ್ತು ಸಸ್ಯದ ಆರೋಗ್ಯದ ಲಕ್ಷಣಗಳನ್ನು ವಿಶ್ಲೇಷಿಸುತ್ತದೆ.",
-    cropDiagnosis: "ಬೆಳೆ ರೋಗನಿರ್ಣಯ",
-    uploadDescription: "ಪೀಡಿತ ಸಸ್ಯದ ಸ್ಪಷ್ಟ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
-    uploadCrop: "ಬೆಳೆ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ",
-    imageTypes: "JPG, PNG ಅಥವಾ WEBP",
-    chooseAnother: "ಮತ್ತೊಂದು ಚಿತ್ರ ಆಯ್ಕೆಮಾಡಿ",
-    analyzeCrop: "ಬೆಳೆಯನ್ನು ವಿಶ್ಲೇಷಿಸಿ",
-    analyzing: "ಬೆಳೆಯನ್ನು ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ...",
-    aiAnalysisComplete: "AI ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
-    diagnosisResult: "ರೋಗನಿರ್ಣಯ ಫಲಿತಾಂಶ",
-    confidence: "ವಿಶ್ವಾಸ",
-    detectedCrop: "ಪತ್ತೆಯಾದ ಬೆಳೆ",
-    possibleCondition: "ಸಂಭಾವ್ಯ ಸಮಸ್ಯೆ",
-    observedSymptoms: "ಗಮನಿಸಿದ ಲಕ್ಷಣಗಳು",
-    noSymptoms: "ಯಾವುದೇ ನಿರ್ದಿಷ್ಟ ಲಕ್ಷಣಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
-    aiExplanation: "AI ವಿವರಣೆ",
-    noExplanation: "ಯಾವುದೇ ವಿವರಣೆ ಲಭ್ಯವಿಲ್ಲ.",
-    recommendedActions: "ಶಿಫಾರಸು ಮಾಡಿದ ಕ್ರಮಗಳು",
-    noRecommendations: "ಯಾವುದೇ ಶಿಫಾರಸುಗಳಿಲ್ಲ.",
-    expertReview: "ತಜ್ಞರ ಪರಿಶೀಲನೆ ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ",
-    expertDescription:
-      "ಕ್ರಮ ಕೈಗೊಳ್ಳುವ ಮೊದಲು ಕೃಷಿ ತಜ್ಞರನ್ನು ಸಂಪರ್ಕಿಸುವುದನ್ನು ಪರಿಗಣಿಸಿ.",
-    savedDiagnosis: "ಉಳಿಸಿದ ರೋಗನಿರ್ಣಯ",
-    diagnosisDetails: "ರೋಗನಿರ್ಣಯ ವಿವರಗಳು",
-    backHistory: "ಇತಿಹಾಸಕ್ಕೆ ಹಿಂತಿರುಗಿ",
-    caseId: "ಕೇಸ್ ID",
-    expertRequired: "ಅಗತ್ಯ",
-    expertNotRequired: "ಅಗತ್ಯವಿಲ್ಲ",
-    yourRecords: "ನಿಮ್ಮ ದಾಖಲೆಗಳು",
-    recentDiagnoses: "ಇತ್ತೀಚಿನ ರೋಗನಿರ್ಣಯಗಳು",
-    case: "ಕೇಸ್",
-    cases: "ಕೇಸ್‌ಗಳು",
-    loadingHistory: "ರೋಗನಿರ್ಣಯ ಇತಿಹಾಸ ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
-    noDiagnoses: "ಇನ್ನೂ ಯಾವುದೇ ರೋಗನಿರ್ಣಯಗಳಿಲ್ಲ",
-    firstDiagnosis:
-      "ನಿಮ್ಮ ಮೊದಲ ರೋಗನಿರ್ಣಯ ದಾಖಲೆಯನ್ನು ರಚಿಸಲು ಬೆಳೆ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
-    unknown: "ಅಜ್ಞಾತ",
-    unknownCrop: "ಅಜ್ಞಾತ ಬೆಳೆ",
-    unknownProblem: "ಅಜ್ಞಾತ ಸಮಸ್ಯೆ",
-    noDiagnosis: "ಯಾವುದೇ ರೋಗನಿರ್ಣಯವಿಲ್ಲ",
-    dateUnavailable: "ದಿನಾಂಕ ಲಭ್ಯವಿಲ್ಲ",
-    severity: "ತೀವ್ರತೆ",
-    language: "ಭಾಷೆ",
-    translating: "ಅನುವಾದಿಸಲಾಗುತ್ತಿದೆ...",
-    systemOnline: "AI ಸಿಸ್ಟಮ್ ಆನ್‌ಲೈನ್",
-    footer: "AgroMitR • ಆರಂಭಿಕ ಪತ್ತೆ ಮತ್ತು ನಿರ್ವಹಣೆ",
-  },
-
-  mr: {
-    smartCropHealth: "स्मार्ट पीक आरोग्य",
-    heroTitle1: "पिकांच्या समस्या शोधा",
-    heroTitle2: " पसरण्यापूर्वी.",
-    subtitle:
-      "पिकाची किंवा पानाची प्रतिमा अपलोड करा आणि आमचे AI रोग, कीड आणि वनस्पतींच्या आरोग्याशी संबंधित लक्षणांचे विश्लेषण करेल.",
-    cropDiagnosis: "पीक निदान",
-    uploadDescription: "प्रभावित झाडाची स्पष्ट प्रतिमा अपलोड करा.",
-    uploadCrop: "पिकाची प्रतिमा अपलोड करा",
-    imageTypes: "JPG, PNG किंवा WEBP",
-    chooseAnother: "दुसरी प्रतिमा निवडा",
-    analyzeCrop: "पिकाचे विश्लेषण करा",
-    analyzing: "पिकाचे विश्लेषण होत आहे...",
-    aiAnalysisComplete: "AI विश्लेषण पूर्ण",
-    diagnosisResult: "निदान परिणाम",
-    confidence: "विश्वास",
-    detectedCrop: "ओळखलेले पीक",
-    possibleCondition: "संभाव्य समस्या",
-    observedSymptoms: "दिसून आलेली लक्षणे",
-    noSymptoms: "कोणतीही विशिष्ट लक्षणे आढळली नाहीत.",
-    aiExplanation: "AI स्पष्टीकरण",
-    noExplanation: "कोणतेही स्पष्टीकरण उपलब्ध नाही.",
-    recommendedActions: "शिफारस केलेल्या कृती",
-    noRecommendations: "कोणत्याही शिफारसी उपलब्ध नाहीत.",
-    expertReview: "तज्ञांच्या तपासणीची शिफारस",
-    expertDescription:
-      "कृती करण्यापूर्वी कृषी तज्ञांचा सल्ला घेण्याचा विचार करा.",
-    savedDiagnosis: "जतन केलेले निदान",
-    diagnosisDetails: "निदान तपशील",
-    backHistory: "इतिहासाकडे परत जा",
-    caseId: "केस ID",
-    expertRequired: "आवश्यक",
-    expertNotRequired: "आवश्यक नाही",
-    yourRecords: "तुमचे रेकॉर्ड",
-    recentDiagnoses: "अलीकडील निदान",
-    case: "केस",
-    cases: "केसेस",
-    loadingHistory: "निदान इतिहास लोड होत आहे...",
-    noDiagnoses: "अद्याप कोणतेही निदान नाही",
-    firstDiagnosis:
-      "तुमचा पहिला निदान रेकॉर्ड तयार करण्यासाठी पिकाची प्रतिमा अपलोड करा.",
-    unknown: "अज्ञात",
-    unknownCrop: "अज्ञात पीक",
-    unknownProblem: "अज्ञात समस्या",
-    noDiagnosis: "निदान उपलब्ध नाही",
-    dateUnavailable: "तारीख उपलब्ध नाही",
-    severity: "तीव्रता",
-    language: "भाषा",
-    translating: "भाषांतर होत आहे...",
-    systemOnline: "AI सिस्टम ऑनलाइन",
-    footer: "AgroMitR • लवकर ओळख आणि व्यवस्थापन",
-  },
-
-  ta: {
-    smartCropHealth: "ஸ்மார்ட் பயிர் ஆரோக்கியம்",
-    heroTitle1: "பயிர் பிரச்சினைகளை கண்டறியுங்கள்",
-    heroTitle2: " பரவுவதற்கு முன்.",
-    subtitle:
-      "பயிர் அல்லது இலையின் படத்தை பதிவேற்றுங்கள். எங்கள் AI நோய்கள், பூச்சிகள் மற்றும் தாவர ஆரோக்கிய அறிகுறிகளை பகுப்பாய்வு செய்யும்.",
-    cropDiagnosis: "பயிர் நோயறிதல்",
-    uploadDescription: "பாதிக்கப்பட்ட தாவரத்தின் தெளிவான படத்தை பதிவேற்றுங்கள்.",
-    uploadCrop: "பயிர் படத்தை பதிவேற்றவும்",
-    imageTypes: "JPG, PNG அல்லது WEBP",
-    chooseAnother: "வேறு படத்தைத் தேர்ந்தெடுக்கவும்",
-    analyzeCrop: "பயிரை பகுப்பாய்வு செய்யவும்",
-    analyzing: "பயிர் பகுப்பாய்வு செய்யப்படுகிறது...",
-    aiAnalysisComplete: "AI பகுப்பாய்வு முடிந்தது",
-    diagnosisResult: "நோயறிதல் முடிவு",
-    confidence: "நம்பிக்கை",
-    detectedCrop: "கண்டறியப்பட்ட பயிர்",
-    possibleCondition: "சாத்தியமான பிரச்சினை",
-    observedSymptoms: "காணப்பட்ட அறிகுறிகள்",
-    noSymptoms: "குறிப்பிட்ட அறிகுறிகள் எதுவும் இல்லை.",
-    aiExplanation: "AI விளக்கம்",
-    noExplanation: "விளக்கம் எதுவும் இல்லை.",
-    recommendedActions: "பரிந்துரைக்கப்பட்ட நடவடிக்கைகள்",
-    noRecommendations: "பரிந்துரைகள் எதுவும் இல்லை.",
-    expertReview: "நிபுணர் பரிசோதனை பரிந்துரைக்கப்படுகிறது",
-    expertDescription:
-      "நடவடிக்கை எடுப்பதற்கு முன் வேளாண் நிபுணரை அணுகவும்.",
-    savedDiagnosis: "சேமிக்கப்பட்ட நோயறிதல்",
-    diagnosisDetails: "நோயறிதல் விவரங்கள்",
-    backHistory: "வரலாற்றுக்குத் திரும்பு",
-    caseId: "வழக்கு ID",
-    expertRequired: "தேவை",
-    expertNotRequired: "தேவையில்லை",
-    yourRecords: "உங்கள் பதிவுகள்",
-    recentDiagnoses: "சமீபத்திய நோயறிதல்கள்",
-    case: "வழக்கு",
-    cases: "வழக்குகள்",
-    loadingHistory: "நோயறிதல் வரலாறு ஏற்றப்படுகிறது...",
-    noDiagnoses: "இன்னும் நோயறிதல்கள் இல்லை",
-    firstDiagnosis:
-      "உங்கள் முதல் நோயறிதல் பதிவை உருவாக்க பயிர் படத்தை பதிவேற்றுங்கள்.",
-    unknown: "தெரியவில்லை",
-    unknownCrop: "தெரியாத பயிர்",
-    unknownProblem: "தெரியாத பிரச்சினை",
-    noDiagnosis: "நோயறிதல் இல்லை",
-    dateUnavailable: "தேதி இல்லை",
-    severity: "தீவிரம்",
-    language: "மொழி",
-    translating: "மொழிபெயர்க்கப்படுகிறது...",
-    systemOnline: "AI அமைப்பு ஆன்லைனில் உள்ளது",
-    footer: "AgroMitR • ஆரம்ப கண்டறிதல் மற்றும் மேலாண்மை",
-  },
-
-  te: {
-    smartCropHealth: "స్మార్ట్ పంట ఆరోగ్యం",
-    heroTitle1: "పంట సమస్యలను గుర్తించండి",
-    heroTitle2: " వ్యాపించే ముందు.",
-    subtitle:
-      "పంట లేదా ఆకు చిత్రాన్ని అప్‌లోడ్ చేయండి. మా AI వ్యాధులు, పురుగులు మరియు మొక్కల ఆరోగ్య లక్షణాలను విశ్లేషిస్తుంది.",
-    cropDiagnosis: "పంట నిర్ధారణ",
-    uploadDescription: "ప్రభావిత మొక్క యొక్క స్పష్టమైన చిత్రాన్ని అప్‌లోడ్ చేయండి.",
-    uploadCrop: "పంట చిత్రాన్ని అప్‌లోడ్ చేయండి",
-    imageTypes: "JPG, PNG లేదా WEBP",
-    chooseAnother: "మరొక చిత్రాన్ని ఎంచుకోండి",
-    analyzeCrop: "పంటను విశ్లేషించండి",
-    analyzing: "పంటను విశ్లేషిస్తోంది...",
-    aiAnalysisComplete: "AI విశ్లేషణ పూర్తయింది",
-    diagnosisResult: "నిర్ధారణ ఫలితం",
-    confidence: "నమ్మకం",
-    detectedCrop: "గుర్తించిన పంట",
-    possibleCondition: "సంభావ్య సమస్య",
-    observedSymptoms: "గమనించిన లక్షణాలు",
-    noSymptoms: "ప్రత్యేక లక్షణాలు ఏవీ కనుగొనబడలేదు.",
-    aiExplanation: "AI వివరణ",
-    noExplanation: "వివరణ అందుబాటులో లేదు.",
-    recommendedActions: "సిఫార్సు చేసిన చర్యలు",
-    noRecommendations: "సిఫార్సులు ఏవీ లేవు.",
-    expertReview: "నిపుణుల సమీక్ష సిఫార్సు చేయబడింది",
-    expertDescription:
-      "చర్య తీసుకునే ముందు వ్యవసాయ నిపుణుడిని సంప్రదించండి.",
-    savedDiagnosis: "సేవ్ చేసిన నిర్ధారణ",
-    diagnosisDetails: "నిర్ధారణ వివరాలు",
-    backHistory: "చరిత్రకు తిరిగి వెళ్లండి",
-    caseId: "కేస్ ID",
-    expertRequired: "అవసరం",
-    expertNotRequired: "అవసరం లేదు",
-    yourRecords: "మీ రికార్డులు",
-    recentDiagnoses: "ఇటీవలి నిర్ధారణలు",
-    case: "కేస్",
-    cases: "కేసులు",
-    loadingHistory: "నిర్ధారణ చరిత్ర లోడ్ అవుతోంది...",
-    noDiagnoses: "ఇంకా నిర్ధారణలు లేవు",
-    firstDiagnosis:
-      "మీ మొదటి నిర్ధారణ రికార్డును సృష్టించడానికి పంట చిత్రాన్ని అప్‌లోడ్ చేయండి.",
-    unknown: "తెలియదు",
-    unknownCrop: "తెలియని పంట",
-    unknownProblem: "తెలియని సమస్య",
-    noDiagnosis: "నిర్ధారణ లేదు",
-    dateUnavailable: "తేదీ అందుబాటులో లేదు",
-    severity: "తీవ్రత",
-    language: "భాష",
-    translating: "అనువదిస్తోంది...",
-    systemOnline: "AI సిస్టమ్ ఆన్‌లైన్‌లో ఉంది",
-    footer: "AgroMitR • ముందస్తు గుర్తింపు మరియు నిర్వహణ",
-  },
-
-  ml: {
-    smartCropHealth: "സ്മാർട്ട് വിള ആരോഗ്യം",
-    heroTitle1: "വിള പ്രശ്നങ്ങൾ കണ്ടെത്തുക",
-    heroTitle2: " പടരുന്നതിന് മുമ്പ്.",
-    subtitle:
-      "വിളയുടെയോ ഇലയുടെയോ ചിത്രം അപ്‌ലോഡ് ചെയ്യുക. ഞങ്ങളുടെ AI രോഗങ്ങൾ, കീടങ്ങൾ, സസ്യാരോഗ്യ ലക്ഷണങ്ങൾ എന്നിവ വിശകലനം ചെയ്യും.",
-    cropDiagnosis: "വിള രോഗനിർണയം",
-    uploadDescription: "ബാധിച്ച ചെടിയുടെ വ്യക്തമായ ചിത്രം അപ്‌ലോഡ് ചെയ്യുക.",
-    uploadCrop: "വിള ചിത്രം അപ്‌ലോഡ് ചെയ്യുക",
-    imageTypes: "JPG, PNG അല്ലെങ്കിൽ WEBP",
-    chooseAnother: "മറ്റൊരു ചിത്രം തിരഞ്ഞെടുക്കുക",
-    analyzeCrop: "വിള വിശകലനം ചെയ്യുക",
-    analyzing: "വിള വിശകലനം ചെയ്യുന്നു...",
-    aiAnalysisComplete: "AI വിശകലനം പൂർത്തിയായി",
-    diagnosisResult: "രോഗനിർണയ ഫലം",
-    confidence: "വിശ്വാസ്യത",
-    detectedCrop: "കണ്ടെത്തിയ വിള",
-    possibleCondition: "സാധ്യമായ പ്രശ്നം",
-    observedSymptoms: "കണ്ടെത്തിയ ലക്ഷണങ്ങൾ",
-    noSymptoms: "പ്രത്യേക ലക്ഷണങ്ങളൊന്നും കണ്ടെത്തിയില്ല.",
-    aiExplanation: "AI വിശദീകരണം",
-    noExplanation: "വിശദീകരണം ലഭ്യമല്ല.",
-    recommendedActions: "ശുപാർശ ചെയ്യുന്ന നടപടികൾ",
-    noRecommendations: "ശുപാർശകളൊന്നുമില്ല.",
-    expertReview: "വിദഗ്ധ പരിശോധന ശുപാർശ ചെയ്യുന്നു",
-    expertDescription:
-      "നടപടി സ്വീകരിക്കുന്നതിന് മുമ്പ് കാർഷിക വിദഗ്ധനെ സമീപിക്കുക.",
-    savedDiagnosis: "സംരക്ഷിച്ച രോഗനിർണയം",
-    diagnosisDetails: "രോഗനിർണയ വിശദാംശങ്ങൾ",
-    backHistory: "ചരിത്രത്തിലേക്ക് മടങ്ങുക",
-    caseId: "കേസ് ID",
-    expertRequired: "ആവശ്യമാണ്",
-    expertNotRequired: "ആവശ്യമില്ല",
-    yourRecords: "നിങ്ങളുടെ രേഖകൾ",
-    recentDiagnoses: "സമീപകാല രോഗനിർണയങ്ങൾ",
-    case: "കേസ്",
-    cases: "കേസുകൾ",
-    loadingHistory: "രോഗനിർണയ ചരിത്രം ലോഡ് ചെയ്യുന്നു...",
-    noDiagnoses: "ഇതുവരെ രോഗനിർണയങ്ങളില്ല",
-    firstDiagnosis:
-      "നിങ്ങളുടെ ആദ്യ രോഗനിർണയ രേഖ സൃഷ്ടിക്കാൻ വിള ചിത്രം അപ്‌ലോഡ് ചെയ്യുക.",
-    unknown: "അജ്ഞാതം",
-    unknownCrop: "അജ്ഞാത വിള",
-    unknownProblem: "അജ്ഞാത പ്രശ്നം",
-    noDiagnosis: "രോഗനിർണയമില്ല",
-    dateUnavailable: "തീയതി ലഭ്യമല്ല",
-    severity: "തീവ്രത",
-    language: "ഭാഷ",
-    translating: "വിവർത്തനം ചെയ്യുന്നു...",
-    systemOnline: "AI സിസ്റ്റം ഓൺലൈനിലാണ്",
-    footer: "AgroMitR • നേരത്തെയുള്ള കണ്ടെത്തലും മാനേജ്മെന്റും",
-  },
-
-  bn: {
-    smartCropHealth: "স্মার্ট ফসল স্বাস্থ্য",
-    heroTitle1: "ফসলের সমস্যা শনাক্ত করুন",
-    heroTitle2: " ছড়িয়ে পড়ার আগে।",
-    subtitle:
-      "ফসল বা পাতার ছবি আপলোড করুন এবং আমাদের AI দৃশ্যমান রোগ, পোকামাকড় ও উদ্ভিদের স্বাস্থ্যগত লক্ষণ বিশ্লেষণ করবে।",
-    cropDiagnosis: "ফসল নির্ণয়",
-    uploadDescription: "আক্রান্ত গাছের একটি পরিষ্কার ছবি আপলোড করুন।",
-    uploadCrop: "ফসলের ছবি আপলোড করুন",
-    imageTypes: "JPG, PNG অথবা WEBP",
-    chooseAnother: "অন্য ছবি নির্বাচন করুন",
-    analyzeCrop: "ফসল বিশ্লেষণ করুন",
-    analyzing: "ফসল বিশ্লেষণ করা হচ্ছে...",
-    aiAnalysisComplete: "AI বিশ্লেষণ সম্পন্ন",
-    diagnosisResult: "নির্ণয়ের ফলাফল",
-    confidence: "বিশ্বাসযোগ্যতা",
-    detectedCrop: "শনাক্ত করা ফসল",
-    possibleCondition: "সম্ভাব্য সমস্যা",
-    observedSymptoms: "পর্যবেক্ষিত লক্ষণ",
-    noSymptoms: "কোনো নির্দিষ্ট লক্ষণ পাওয়া যায়নি।",
-    aiExplanation: "AI ব্যাখ্যা",
-    noExplanation: "কোনো ব্যাখ্যা দেওয়া হয়নি।",
-    recommendedActions: "প্রস্তাবিত পদক্ষেপ",
-    noRecommendations: "কোনো সুপারিশ নেই।",
-    expertReview: "বিশেষজ্ঞ পর্যালোচনা সুপারিশ করা হচ্ছে",
-    expertDescription:
-      "কোনো পদক্ষেপ নেওয়ার আগে কৃষি বিশেষজ্ঞের পরামর্শ নিন।",
-    savedDiagnosis: "সংরক্ষিত নির্ণয়",
-    diagnosisDetails: "নির্ণয়ের বিবরণ",
-    backHistory: "ইতিহাসে ফিরে যান",
-    caseId: "কেস ID",
-    expertRequired: "প্রয়োজন",
-    expertNotRequired: "প্রয়োজন নেই",
-    yourRecords: "আপনার রেকর্ড",
-    recentDiagnoses: "সাম্প্রতিক নির্ণয়",
-    case: "কেস",
-    cases: "কেস",
-    loadingHistory: "নির্ণয়ের ইতিহাস লোড হচ্ছে...",
-    noDiagnoses: "এখনও কোনো নির্ণয় নেই",
-    firstDiagnosis:
-      "আপনার প্রথম নির্ণয় রেকর্ড তৈরি করতে ফসলের ছবি আপলোড করুন।",
-    unknown: "অজানা",
-    unknownCrop: "অজানা ফসল",
-    unknownProblem: "অজানা সমস্যা",
-    noDiagnosis: "কোনো নির্ণয় নেই",
-    dateUnavailable: "তারিখ পাওয়া যায়নি",
-    severity: "তীব্রতা",
-    language: "ভাষা",
-    translating: "অনুবাদ করা হচ্ছে...",
-    systemOnline: "AI সিস্টেম অনলাইন",
-    footer: "AgroMitR • প্রাথমিক শনাক্তকরণ ও ব্যবস্থাপনা",
-  },
-
-  gu: {
-    smartCropHealth: "સ્માર્ટ પાક આરોગ્ય",
-    heroTitle1: "પાકની સમસ્યાઓ શોધો",
-    heroTitle2: " ફેલાય તે પહેલાં.",
-    subtitle:
-      "પાક અથવા પાંદડાની છબી અપલોડ કરો અને અમારું AI રોગો, જીવાતો અને છોડના આરોગ્યના લક્ષણોનું વિશ્લેષણ કરશે.",
-    cropDiagnosis: "પાક નિદાન",
-    uploadDescription: "અસરગ્રસ્ત છોડની સ્પષ્ટ છબી અપલોડ કરો.",
-    uploadCrop: "પાકની છબી અપલોડ કરો",
-    imageTypes: "JPG, PNG અથવા WEBP",
-    chooseAnother: "બીજી છબી પસંદ કરો",
-    analyzeCrop: "પાકનું વિશ્લેષણ કરો",
-    analyzing: "પાકનું વિશ્લેષણ થઈ રહ્યું છે...",
-    aiAnalysisComplete: "AI વિશ્લેષણ પૂર્ણ",
-    diagnosisResult: "નિદાન પરિણામ",
-    confidence: "વિશ્વાસ",
-    detectedCrop: "ઓળખાયેલ પાક",
-    possibleCondition: "સંભવિત સમસ્યા",
-    observedSymptoms: "જોવાયેલા લક્ષણો",
-    noSymptoms: "કોઈ ચોક્કસ લક્ષણો મળ્યા નથી.",
-    aiExplanation: "AI સમજૂતી",
-    noExplanation: "કોઈ સમજૂતી ઉપલબ્ધ નથી.",
-    recommendedActions: "ભલામણ કરેલ પગલાં",
-    noRecommendations: "કોઈ ભલામણો નથી.",
-    expertReview: "નિષ્ણાતની સમીક્ષા ભલામણ કરેલ છે",
-    expertDescription:
-      "પગલાં લેતા પહેલાં કૃષિ નિષ્ણાતની સલાહ લેવાનું વિચારો.",
-    savedDiagnosis: "સાચવેલ નિદાન",
-    diagnosisDetails: "નિદાન વિગતો",
-    backHistory: "ઇતિહાસ પર પાછા જાઓ",
-    caseId: "કેસ ID",
-    expertRequired: "જરૂરી",
-    expertNotRequired: "જરૂરી નથી",
-    yourRecords: "તમારા રેકોર્ડ્સ",
-    recentDiagnoses: "તાજેતરના નિદાન",
-    case: "કેસ",
-    cases: "કેસો",
-    loadingHistory: "નિદાન ઇતિહાસ લોડ થઈ રહ્યો છે...",
-    noDiagnoses: "હજુ સુધી કોઈ નિદાન નથી",
-    firstDiagnosis:
-      "તમારો પ્રથમ નિદાન રેકોર્ડ બનાવવા માટે પાકની છબી અપલોડ કરો.",
-    unknown: "અજ્ઞાત",
-    unknownCrop: "અજ્ઞાત પાક",
-    unknownProblem: "અજ્ઞાત સમસ્યા",
-    noDiagnosis: "કોઈ નિદાન નથી",
-    dateUnavailable: "તારીખ ઉપલબ્ધ નથી",
-    severity: "તીવ્રતા",
-    language: "ભાષા",
-    translating: "ભાષાંતર થઈ રહ્યું છે...",
-    systemOnline: "AI સિસ્ટમ ઓનલાઈન",
-    footer: "AgroMitR • વહેલી ઓળખ અને વ્યવસ્થાપન",
-  },
-
-  pa: {
-    smartCropHealth: "ਸਮਾਰਟ ਫਸਲ ਸਿਹਤ",
-    heroTitle1: "ਫਸਲ ਦੀਆਂ ਸਮੱਸਿਆਵਾਂ ਪਛਾਣੋ",
-    heroTitle2: " ਫੈਲਣ ਤੋਂ ਪਹਿਲਾਂ।",
-    subtitle:
-      "ਫਸਲ ਜਾਂ ਪੱਤੇ ਦੀ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰੋ ਅਤੇ ਸਾਡਾ AI ਬਿਮਾਰੀਆਂ, ਕੀੜਿਆਂ ਅਤੇ ਪੌਦਿਆਂ ਦੀ ਸਿਹਤ ਦੇ ਲੱਛਣਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੇਗਾ।",
-    cropDiagnosis: "ਫਸਲ ਨਿਦਾਨ",
-    uploadDescription: "ਪ੍ਰਭਾਵਿਤ ਪੌਦੇ ਦੀ ਸਾਫ਼ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰੋ।",
-    uploadCrop: "ਫਸਲ ਦੀ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰੋ",
-    imageTypes: "JPG, PNG ਜਾਂ WEBP",
-    chooseAnother: "ਹੋਰ ਤਸਵੀਰ ਚੁਣੋ",
-    analyzeCrop: "ਫਸਲ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ",
-    analyzing: "ਫਸਲ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...",
-    aiAnalysisComplete: "AI ਵਿਸ਼ਲੇਸ਼ਣ ਪੂਰਾ",
-    diagnosisResult: "ਨਿਦਾਨ ਨਤੀਜਾ",
-    confidence: "ਭਰੋਸਾ",
-    detectedCrop: "ਪਛਾਣੀ ਗਈ ਫਸਲ",
-    possibleCondition: "ਸੰਭਾਵਿਤ ਸਮੱਸਿਆ",
-    observedSymptoms: "ਦੇਖੇ ਗਏ ਲੱਛਣ",
-    noSymptoms: "ਕੋਈ ਖਾਸ ਲੱਛਣ ਨਹੀਂ ਮਿਲੇ।",
-    aiExplanation: "AI ਵਿਆਖਿਆ",
-    noExplanation: "ਕੋਈ ਵਿਆਖਿਆ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
-    recommendedActions: "ਸਿਫ਼ਾਰਸ਼ ਕੀਤੀਆਂ ਕਾਰਵਾਈਆਂ",
-    noRecommendations: "ਕੋਈ ਸਿਫ਼ਾਰਸ਼ਾਂ ਨਹੀਂ ਹਨ।",
-    expertReview: "ਮਾਹਿਰ ਦੀ ਸਮੀਖਿਆ ਦੀ ਸਿਫ਼ਾਰਸ਼",
-    expertDescription:
-      "ਕਾਰਵਾਈ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਖੇਤੀਬਾੜੀ ਮਾਹਿਰ ਨਾਲ ਸਲਾਹ ਕਰਨ ਬਾਰੇ ਵਿਚਾਰ ਕਰੋ।",
-    savedDiagnosis: "ਸੁਰੱਖਿਅਤ ਨਿਦਾਨ",
-    diagnosisDetails: "ਨਿਦਾਨ ਵੇਰਵੇ",
-    backHistory: "ਇਤਿਹਾਸ 'ਤੇ ਵਾਪਸ ਜਾਓ",
-    caseId: "ਕੇਸ ID",
-    expertRequired: "ਲੋੜੀਂਦਾ",
-    expertNotRequired: "ਲੋੜੀਂਦਾ ਨਹੀਂ",
-    yourRecords: "ਤੁਹਾਡੇ ਰਿਕਾਰਡ",
-    recentDiagnoses: "ਹਾਲੀਆ ਨਿਦਾਨ",
-    case: "ਕੇਸ",
-    cases: "ਕੇਸ",
-    loadingHistory: "ਨਿਦਾਨ ਇਤਿਹਾਸ ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ...",
-    noDiagnoses: "ਅਜੇ ਤੱਕ ਕੋਈ ਨਿਦਾਨ ਨਹੀਂ",
-    firstDiagnosis:
-      "ਆਪਣਾ ਪਹਿਲਾ ਨਿਦਾਨ ਰਿਕਾਰਡ ਬਣਾਉਣ ਲਈ ਫਸਲ ਦੀ ਤਸਵੀਰ ਅਪਲੋਡ ਕਰੋ।",
-    unknown: "ਅਣਜਾਣ",
-    unknownCrop: "ਅਣਜਾਣ ਫਸਲ",
-    unknownProblem: "ਅਣਜਾਣ ਸਮੱਸਿਆ",
-    noDiagnosis: "ਕੋਈ ਨਿਦਾਨ ਨਹੀਂ",
-    dateUnavailable: "ਤਾਰੀਖ ਉਪਲਬਧ ਨਹੀਂ",
-    severity: "ਗੰਭੀਰਤਾ",
-    language: "ਭਾਸ਼ਾ",
-    translating: "ਅਨੁਵਾਦ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...",
-    systemOnline: "AI ਸਿਸਟਮ ਔਨਲਾਈਨ",
-    footer: "AgroMitR • ਸ਼ੁਰੂਆਤੀ ਪਛਾਣ ਅਤੇ ਪ੍ਰਬੰਧਨ",
-  },
 };
 
+const PAGE_TEXT = {
+  en: {
+
+    home: "Home", crops: "Your Crops", health: "Crop Health", weather: "Weather", chat: "AI Chat",
+    farmOverview: "FARM OVERVIEW", farmTitle: "Your farm, at a glance.", farmSubtitle: "Keep track of crop health, recent problems and the actions that need your attention.",
+    newHealthCheck: "New health check", trackedCrops: "Tracked crops", healthChecks: "Health checks", needsAttention: "Needs attention", monitorClosely: "Monitor closely", looksGood: "Looks good",
+    cropMonitoring: "CROP MONITORING", yourCrops: "Your Crops", cropSummary: "Keep track of your currently growing crops.", viewAllCrops: "View All Crops", noCrops: "No crops being monitored", addCropsPrompt: "Add your crops to start tracking their growth and health.", addCrop: "Add Crop", healthStatus: "Health Check Status", cropsChecked: "Crops Checked", healthCheck: "Health check", trackRecord: "TRACK RECORD", recentActivity: "Recent Activity", noActivity: "Your diagnosis activity will appear here.", insight: "AgroMitR INSIGHT", insightTitle: "Stay ahead, not just react.", insightText: "Combine crop health records with weather and pest observations to plan the next farm action.", planWeather: "Plan with weather", quickAction: "QUICK ACTION", needHelp: "Need help with your crop?", ask: "Ask AgroMitR",
+    allCrops: "All Your Crops", cropInfo: "Your registered crops and their current information.", activeCrops: "Active Crops", locations: "Field Locations", newCrop: "NEW CROP", editCrop: "EDIT CROP", addCropTitle: "Add Crop", editCropTitle: "Edit Crop", addCropDescription: "Add your crop details to start monitoring it.", editCropDescription: "Update your crop details when field conditions change.", cropInformation: "Crop Information", growthInformation: "Growth Information", fieldInformation: "Field Information", fieldNotes: "Field Notes", location: "Location", soilType: "Soil Type", irrigation: "Irrigation Type", notes: "Notes", cancel: "Cancel", saveChanges: "Save Changes", delete: "Delete", save: "Saving...",
+    smartHealth: "SMART CROP HEALTH", protect: "Protect your crops", protectSubtitle: "Choose an analysis type and upload a clear crop image. AgroMitR will identify visible diseases or pest infestation signs.", analysisReady: "AI analysis ready", disease: "DISEASE", infestation: "INFESTATION", diseaseTitle: "Crop Disease Detection", pestTitle: "Pest Infestation Detection", diseaseDescription: "Identify possible diseases, symptoms, severity and recommended actions.", pestDescription: "Identify likely pests, infestation signs, risk level and recommended actions.", selected: "Selected", uploadImage: "Upload an image", uploadDescription: "Use a clear, well-lit photo of the affected leaf, plant or pest.", aiAssisted: "AI ASSISTED", whatChecks: "What AgroMitR checks", cropIdentification: "Crop identification", diseaseSymptoms: "Disease & symptoms", pestSigns: "Pest & infestation signs", riskAssessment: "Risk assessment", actionGuidance: "Action guidance", safetyNote: "AI results are recommendations. Consult an agricultural expert for uncertain or severe cases.", analyzeDisease: "Analyze Crop Disease", analyzePest: "Detect Pest Infestation", readyAnalysis: "Ready for AI analysis. Select up to 5 images for more context.", searching: "Searching locations...",
+    startRecord: "Start building your farm record",
+    analyzeFirst: "Analyze first crop",
+    lastChecked: "Last checked",
+    crop: "crop", cropsLabel: "crops", days: "days",
+    fillCropFields: "Please fill in crop name, area and planting date.",
+    failedAddCrop: "Failed to add crop", unableAddCrop: "Unable to add crop.",
+    confirmRemoveCrop: "Are you sure you want to remove this crop from Your Crops?",
+    failedRemoveCrop: "Failed to remove crop", unableRemoveCrop: "Unable to remove crop.",
+    notProvided: "Not provided", notSet: "Not set", unnamedCrop: "Unnamed Crop",
+    acre: "acre", hectare: "hectare", bigha: "bigha", guntha: "guntha", sqft: "sq ft",
+    loamy: "Loamy", clay: "Clay", sandy: "Sandy", silty: "Silty", blackSoil: "Black Soil", redSoil: "Red Soil", other: "Other",
+    rainfed: "Rainfed", drip: "Drip", sprinkler: "Sprinkler", flood: "Flood",
+    noCropsAdded: "No crops added yet",
+    firstCropPrompt: "Add your first crop to start monitoring your farm.",
+    cropName: "Crop Name",
+    variety: "Variety",
+    area: "Land Area",
+    growingFor: "Growing For",
+    planted: "Planted",
+    harvest: "Harvest",
+    selectSoil: "Select soil type",
+    selectIrrigation: "Select irrigation",
+    plantingDate: "Planting Date",
+    expectedHarvest: "Expected Harvest Date",
+    villagePlaceholder: "Village / field location",
+    tomatoPlaceholder: "e.g. Tomato",
+    varietyPlaceholder: "e.g. Roma",
+    areaPlaceholder: "e.g. 2",
+    notesPlaceholder: "Add any additional information about this crop or field...",
+    dropImage: "Drop your crop image here",
+    browseImage: "or click to browse from your device",
+    uploadHint: "For best results, keep the affected area visible.",
+    analysisError: "Analysis could not be completed",
+    healthRecordPrompt: "Analyze a crop image and AgroMitR will automatically start tracking the crop and its health history here.",
+    weatherTitle: "Plan your farm around the weather.",
+    weatherSubtitle: "Check local conditions, forecasted rain, heat and wind, then turn them into practical farm preparation steps.",
+    searchLocation: "Search your farm city or location",
+    checkWeather: "Check Weather",
+    currentLocation: "Use my current location",
+    chatTitle: "Talk to your farming assistant.",
+    chatSubtitle: "Get practical crop-health guidance using your diagnosis history.",
+    chats: "Chats",
+    newChat: "New chat",
+    tryAsking: "Try asking",
+    clearChat: "Clear current chat",
+    cropGuidance: "Crop & farm guidance",
+    askAnything: "Ask AgroMitr anything about your crops...",
+    beforeProblems: " before problems spread.", stepOne: "STEP 1", imageFormats: "JPG · PNG · WEBP", dropImage: "Drop your crop image here", browseImage: "or click to browse from your device", uploadHint: "For best results, keep the affected area visible.", changeImage: "Change image", selectedImage: "Selected image", imagesSelected: "images selected", pestAnalysis: "Pest analysis", diseaseAnalysis: "Disease analysis", analyzing: "Analyzing...", analysisError: "Analysis could not be completed", detectsCrop: "Detects the crop visible in the image.", analyzesSigns: "Analyzes visible signs to identify the likely problem.", providesRisk: "Provides confidence and severity or infestation risk where available.", givesActions: "Gives practical next steps for the farmer.", cropName: "Crop Name", variety: "Variety", area: "Land Area", growingFor: "Growing For", planted: "Planted", harvest: "Harvest", plantingDate: "Planting Date", expectedHarvest: "Expected Harvest Date", fieldNotes: "Field Notes", selectSoil: "Select soil type", selectIrrigation: "Select irrigation", tomatoPlaceholder: "e.g. Tomato", varietyPlaceholder: "e.g. Roma", areaPlaceholder: "e.g. 2", villagePlaceholder: "Village / field location", notesPlaceholder: "Add any additional information about this crop or field...", noCropsAdded: "No crops added yet", firstCropPrompt: "Add your first crop to start monitoring your farm.", startRecord: "Start building your farm record", healthRecordPrompt: "Analyze a crop image and AgroMitR will automatically start tracking the crop and its health history here.", lastChecked: "Last checked",
+    weatherKicker: "AGROMITR WEATHER INTELLIGENCE", searchingWeather: "Searching...", checkingWeather: "Checking...", findingLocation: "Finding your location...", farmLocation: "FARM LOCATION", rightNow: "RIGHT NOW", humidity: "Humidity", wind: "Wind", rain: "Rain", cloudCover: "Cloud cover", forecast: "FORECAST", outlook: "7-day farm outlook", farmPlanning: "Farm planning", advisory: "AGROMITR ADVISORY", prepare: "What should you prepare for?", cropsTracked: "crops tracked", generalFarmPlan: "General farm plan", nextFieldWindow: "NEXT FIELD WINDOW", planBeforeAct: "Plan before you act.", temperature: "Temperature", today: "today", forecastFor: "Forecast for", forecastDisclaimer: "Weather data is forecast information. Use local agricultural guidance and field observations before making high-impact treatment decisions.", rainLikely: "Rain likely", fungalRisk: "Fungal-risk conditions", heatStress: "Heat stress watch", strongWind: "Strong wind", planFieldWork: "Plan field work", pestMonitoring: "Pest monitoring", goodPlanning: "Good planning window",
+    starterDisease: "How can I protect my crops from disease?", starterYellow: "What should I do if leaves are turning yellow?", starterPests: "How often should I check my crops for pests?", starterGrowth: "How can I improve plant growth naturally?", question: "question", questions: "questions", responsesIn: "Responses will be provided in", enterSend: "Enter to send", shiftEnter: "Shift + Enter for a new line", aiGuidance: "AI guidance • verify critical treatment decisions", thinking: "AgroMitr is thinking...",
+    weather0: "Clear sky", weather1: "Mainly clear", weather2: "Partly cloudy", weather3: "Overcast", weather45: "Fog", weather48: "Rime fog", weather51: "Light drizzle", weather53: "Drizzle", weather55: "Heavy drizzle", weather56: "Freezing drizzle", weather57: "Heavy freezing drizzle", weather61: "Light rain", weather63: "Rain", weather65: "Heavy rain", weather66: "Freezing rain", weather67: "Heavy freezing rain", weather71: "Light snow", weather73: "Snow", weather75: "Heavy snow", weather77: "Snow grains", weather80: "Rain showers", weather81: "Rain showers", weather82: "Heavy rain showers", weather85: "Snow showers", weather86: "Heavy snow showers", weather95: "Thunderstorm", weather96: "Thunderstorm with hail", weather99: "Thunderstorm with heavy hail", weatherVariable: "Variable conditions",
+    rainProbability: "Rain probability is", protectProduce: "Avoid unnecessary irrigation and protect harvested produce.", fungalHistory: "Your recent crop records include disease problems, and humid conditions can increase leaf-wetness and fungal pressure. Inspect affected crops closely.", fungalHumidity: "High humidity can keep leaves wet for longer. Increase monitoring for fungal symptoms and improve airflow where possible.", maxTemperature: "Today's maximum temperature may reach", soilMoisture: "Check soil moisture and plan irrigation around the cooler part of the day.", windMayReach: "Wind may reach", avoidSpraying: "Avoid spraying during strong winds and secure vulnerable plants.", fieldWorkText: "Several of the next few days show elevated rain probability. Schedule spraying, harvesting and soil work during the clearest window.", pestMonitoringText: "Warm and humid conditions can support pest activity. Check the undersides of leaves and new growth during your next field inspection.", goodPlanningText: "No major weather-based warning was detected for today. Continue routine crop monitoring and use the forecast to plan field work.", refresh: "Refresh", upTo: "Up to",
+
+  }
+};
+
+const NavIcon = ({ type, size = 17 }) => {
+  const paths = {
+    home: (
+      <>
+        <path d="M3 10.5L12 3l9 7.5" />
+        <path d="M5 9.5V21h14V9.5" />
+        <path d="M9 21v-6h6v6" />
+      </>
+    ),
+
+    crops: (
+      <>
+        <path d="M12 21V10" />
+        <path d="M12 10C7 10 4 7 4 3c5 0 8 2 8 7" />
+        <path d="M12 14c0-4 3-7 8-7 0 4-3 7-8 7" />
+      </>
+    ),
+
+    health: (
+      <>
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 5 5" />
+        <path d="M8.5 11h5" />
+        <path d="M11 8.5v5" />
+      </>
+    ),
+
+    weather: (
+      <>
+        <circle cx="8" cy="8" r="3" />
+        <path d="M8 2v1" />
+        <path d="M8 13v1" />
+        <path d="m3.8 3.8.7.7" />
+        <path d="m11.5 11.5.7.7" />
+        <path d="M15 18h4a3 3 0 0 0 .5-5.96A5 5 0 0 0 10 13.5" />
+      </>
+    ),
+
+    chat: (
+      <>
+        <path d="M20 15a4 4 0 0 1-4 4H9l-5 3v-7a4 4 0 0 1-1-3V7a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4z" />
+        <path d="M8 10h.01" />
+        <path d="M12 10h.01" />
+        <path d="M16 10h.01" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[type]}
+    </svg>
+  );
+};
 
 function App() {
   // ==========================================================
   // STATE
   // ==========================================================
 
+  const { t, language, dictionary } = useTranslation();
+
+  const [hasSelectedLanguage, setHasSelectedLanguage] = useState(
+    () => !!localStorage.getItem("agromitr_language")
+  );
+
   const [file, setFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState("disease");
   const [activeTab, setActiveTab] = useState("home");
@@ -581,15 +257,11 @@ function App() {
   const [result, setResult] = useState(null);
 
   const [history, setHistory] = useState([]);
-  const [translatedHistory, setTranslatedHistory] = useState([]);
 
   const [selectedDiagnosis, setSelectedDiagnosis] = useState(null);
 
-  const [language, setLanguage] = useState("en");
-
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [translating, setTranslating] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -597,11 +269,53 @@ function App() {
 
   const [chatContextRequest, setChatContextRequest] = useState(null);
 
-  // ==========================================================
-  // CURRENT UI LANGUAGE
-  // ==========================================================
+  const [crops, setCrops] = useState([]);
+  const [showAddCrop, setShowAddCrop] = useState(false);
+  const [editingCropId, setEditingCropId] = useState(null);
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [locationLoading, setLocationLoading] = useState(false);
 
-  const text = UI_TEXT[language] || UI_TEXT.en;
+  const [authUser, setAuthUser] = useState(() => {
+  const savedUser = localStorage.getItem("agromitr_user");
+
+    if (!savedUser) return null;
+
+    try {
+      return JSON.parse(savedUser);
+    } catch {
+      localStorage.removeItem("agromitr_user");
+      return null;
+    }
+  });
+
+  const handleLogin = (user) => {
+    setAuthUser(user);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("agromitr_access_token");
+    localStorage.removeItem("agromitr_user");
+    setAuthUser(null);
+  };
+
+  const [cropForm, setCropForm] = useState({
+    crop_name: "",
+    variety: "",
+    area: "",
+    area_unit: "acre",
+    planted_date: "",
+    expected_harvest_date: "",
+    location: "",
+    irrigation_type: "",
+    soil_type: "",
+    notes: "",
+  });
+
+  const [savingCrop, setSavingCrop] = useState(false);
+
+  // Use t() for translations — dictionary is the full locale object for components
+  const text = dictionary;
+  const pageText = dictionary;
 
   const changeTab = (tab) => {
     setActiveTab(tab);
@@ -632,14 +346,264 @@ function App() {
     ).values()
   );
 
+  useEffect(() => {
+    const loadCrops = async () => {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/crops/",
+          {
+            headers: {
+              ...getAuthHeaders(),
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load crops");
+        }
+
+        const data = await response.json();
+
+        setCrops(
+          Array.isArray(data)
+            ? data
+            : data.crops || []
+        );
+      } catch (error) {
+        console.error("Failed to load crops:", error);
+      }
+    };
+
+    if (authUser) {
+      loadCrops();
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    const query = cropForm.location.trim();
+
+    if (query.length < 3) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        setLocationLoading(true);
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`,
+          { signal: controller.signal, headers: { Accept: "application/json" } }
+        );
+
+        if (response.ok) {
+          setLocationSuggestions(await response.json());
+        }
+      } catch (error) {
+        if (error.name !== "AbortError") console.error("Location search error:", error);
+      } finally {
+        setLocationLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [cropForm.location]);
+
+  const handleAddCrop = async (e) => {
+    e.preventDefault();
+
+    if (
+      !cropForm.crop_name.trim() ||
+      !cropForm.area ||
+      !cropForm.planted_date
+    ) {
+      alert(pageText.fillCropFields);
+      return;
+    }
+
+    try {
+      setSavingCrop(true);
+
+      const response = await fetch(
+        editingCropId
+          ? `http://127.0.0.1:8000/crops/${editingCropId}`
+          : "http://127.0.0.1:8000/crops/",
+        {
+          method: editingCropId ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            crop_name: cropForm.crop_name.trim(),
+            variety: cropForm.variety.trim() || null,
+
+            area: Number(cropForm.area),
+            area_unit: cropForm.area_unit,
+
+            planted_date: cropForm.planted_date,
+
+            expected_harvest_date:
+              cropForm.expected_harvest_date || null,
+
+            location:
+              cropForm.location.trim() || null,
+
+            irrigation_type:
+              cropForm.irrigation_type || null,
+
+            soil_type:
+              cropForm.soil_type || null,
+
+            notes:
+              cropForm.notes.trim() || null,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData =
+          await response.json().catch(() => null);
+
+        throw new Error(
+          errorData?.detail || pageText.failedAddCrop
+        );
+      }
+
+      await response.json().catch(() => null);
+
+      const refreshedResponse = await fetch(
+        "http://127.0.0.1:8000/crops/",
+        {
+          headers: {
+            ...getAuthHeaders(),
+          },
+        }
+      );
+
+      if (refreshedResponse.ok) {
+        const refreshedCrops = await refreshedResponse.json();
+        setCrops(
+          Array.isArray(refreshedCrops)
+            ? refreshedCrops
+            : refreshedCrops.crops || []
+        );
+      }
+
+      setCropForm({
+        crop_name: "",
+        variety: "",
+        area: "",
+        area_unit: "acre",
+        planted_date: "",
+        expected_harvest_date: "",
+        location: "",
+        irrigation_type: "",
+        soil_type: "",
+        notes: "",
+      });
+
+      setShowAddCrop(false);
+      setEditingCropId(null);
+      setLocationSuggestions([]);
+
+    } catch (error) {
+      console.error("Add crop error:", error);
+
+      alert(
+        error.message ||
+        pageText.unableAddCrop
+      );
+
+    } finally {
+      setSavingCrop(false);
+    }
+  };
+
+  const openCropEditor = (crop) => {
+    setEditingCropId(crop.id);
+    setCropForm({
+      crop_name: crop.crop_name || "",
+      variety: crop.variety || "",
+      area: crop.area ?? "",
+      area_unit: crop.area_unit || "acre",
+      planted_date: crop.planted_date ? String(crop.planted_date).slice(0, 10) : "",
+      expected_harvest_date: crop.expected_harvest_date ? String(crop.expected_harvest_date).slice(0, 10) : "",
+      location: crop.location || "",
+      irrigation_type: crop.irrigation_type || "",
+      soil_type: crop.soil_type || "",
+      notes: crop.notes || "",
+    });
+    setShowAddCrop(true);
+  };
+
+  const openNewCropForm = () => {
+    setEditingCropId(null);
+    setCropForm({
+      crop_name: "",
+      variety: "",
+      area: "",
+      area_unit: "acre",
+      planted_date: "",
+      expected_harvest_date: "",
+      location: "",
+      irrigation_type: "",
+      soil_type: "",
+      notes: "",
+    });
+    setLocationSuggestions([]);
+    setShowAddCrop(true);
+  };
+
+  const handleDeleteCrop = async (cropId) => {
+    const confirmed = window.confirm(
+      pageText.confirmRemoveCrop
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/crops/${cropId}`,
+        {
+          method: "DELETE",
+          headers: {
+            ...getAuthHeaders(),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+
+        throw new Error(
+          errorData?.detail || pageText.failedRemoveCrop
+        );
+      }
+
+      // Remove it from the active crop list immediately
+      setCrops((prevCrops) =>
+        prevCrops.filter((crop) => crop.id !== cropId)
+      );
+
+    } catch (error) {
+      console.error("Delete crop error:", error);
+      alert(error.message || pageText.unableRemoveCrop);
+    }
+  };
 
   // ==========================================================
   // LOAD HISTORY
   // ==========================================================
 
   useEffect(() => {
+    if (!authUser) return;
+
     loadHistory();
-  }, []);
+  }, [authUser]);
+
 
   const loadHistory = async () => {
     try {
@@ -655,10 +619,6 @@ function App() {
       // Update the main history
       setHistory(diagnoses);
 
-      // Always keep the displayed history synchronized
-      // with the latest backend records.
-      setTranslatedHistory(diagnoses);
-
     } catch (err) {
       console.error("History error:", err);
 
@@ -672,257 +632,6 @@ function App() {
 
 
   // ==========================================================
-  // TRANSLATE ONE DIAGNOSIS
-  // ==========================================================
-
-  const translateOne = async (
-    diagnosis,
-    targetLanguage
-  ) => {
-
-    if (!diagnosis) {
-      return diagnosis;
-    }
-
-    // No API call for English
-    if (targetLanguage === "en") {
-      return diagnosis;
-    }
-
-    try {
-
-      const response = await axios.post(
-        `${API_URL}/diagnose/translate/`,
-        {
-          diagnosis: diagnosis,
-          language: targetLanguage,
-        }
-      );
-
-      const translated =
-        response.data?.diagnosis;
-
-      if (
-        translated &&
-        typeof translated === "object"
-      ) {
-        return {
-          ...diagnosis,
-          ...translated,
-        };
-      }
-
-      return diagnosis;
-
-    } catch (err) {
-
-      console.error(
-        `Translation failed for case ${diagnosis.id}:`,
-        err
-      );
-
-      // If one record fails,
-      // keep the original record.
-      return diagnosis;
-    }
-  };
-
-
-  // ==========================================================
-  // TRANSLATE ALL HISTORY
-  // ==========================================================
-
-  const translateHistory = async (
-    targetLanguage
-  ) => {
-
-    if (!history || history.length === 0) {
-      setTranslatedHistory([]);
-      return;
-    }
-
-    if (targetLanguage === "en") {
-      setTranslatedHistory(history);
-      return;
-    }
-
-    setTranslating(true);
-    setError("");
-
-    try {
-
-      /*
-       * Translate history in small batches.
-       *
-       * This prevents sending 20+ Groq requests
-       * at exactly the same time.
-       */
-
-      const translated = [];
-
-      const BATCH_SIZE = 3;
-
-      for (
-        let i = 0;
-        i < history.length;
-        i += BATCH_SIZE
-      ) {
-
-        const batch =
-          history.slice(
-            i,
-            i + BATCH_SIZE
-          );
-
-        const batchResults =
-          await Promise.all(
-            batch.map((item) =>
-              translateOne(
-                item,
-                targetLanguage
-              )
-            )
-          );
-
-        translated.push(
-          ...batchResults
-        );
-      }
-
-      setTranslatedHistory(translated);
-
-      // ------------------------------------------------------
-      // Update selected diagnosis too
-      // ------------------------------------------------------
-
-      if (selectedDiagnosis) {
-
-        const translatedSelected =
-          translated.find(
-            (item) =>
-              item.id ===
-              selectedDiagnosis.id
-          );
-
-        if (translatedSelected) {
-          setSelectedDiagnosis(
-            translatedSelected
-          );
-        }
-      }
-
-    } catch (err) {
-
-      console.error(
-        "History translation error:",
-        err
-      );
-
-      // Never destroy original history
-      setTranslatedHistory(history);
-
-    } finally {
-      setTranslating(false);
-    }
-  };
-
-
-  // ==========================================================
-  // CHANGE LANGUAGE
-  // ==========================================================
-
-  const handleLanguageChange = async (
-    event
-  ) => {
-
-    const newLanguage =
-      event.target.value;
-
-    setLanguage(newLanguage);
-
-    // --------------------------------------------------------
-    // English
-    // --------------------------------------------------------
-
-    if (newLanguage === "en") {
-
-      setTranslatedHistory(history);
-
-      if (result) {
-        setResult(
-          result._original ||
-          result
-        );
-      }
-
-      if (selectedDiagnosis) {
-
-        const original =
-          history.find(
-            (item) =>
-              item.id ===
-              selectedDiagnosis.id
-          );
-
-        if (original) {
-          setSelectedDiagnosis(original);
-        }
-      }
-
-      return;
-    }
-
-    // --------------------------------------------------------
-    // Translate current result
-    // --------------------------------------------------------
-
-    setTranslating(true);
-    setError("");
-
-    try {
-
-      // Translate current diagnosis
-      if (result) {
-
-        const originalResult =
-          result._original ||
-          result;
-
-        const translatedResult =
-          await translateOne(
-            originalResult,
-            newLanguage
-          );
-
-        setResult({
-          ...translatedResult,
-          _original: originalResult,
-        });
-      }
-
-      // Translate history
-      await translateHistory(
-        newLanguage
-      );
-
-    } catch (err) {
-
-      console.error(
-        "Language change error:",
-        err
-      );
-
-      setError(
-        "Unable to translate diagnosis."
-      );
-
-    } finally {
-      setTranslating(false);
-    }
-  };
-
-
-  // ==========================================================
   // FILE CHANGE
   // ==========================================================
 
@@ -930,20 +639,16 @@ function App() {
     event
   ) => {
 
-    const selectedFile =
-      event.target.files[0];
+    const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
 
-    if (!selectedFile) {
+    if (selectedFiles.length === 0) {
       return;
     }
 
-    setFile(selectedFile);
+    setFile(selectedFiles[0]);
+    setSelectedFiles(selectedFiles);
 
-    setPreview(
-      URL.createObjectURL(
-        selectedFile
-      )
-    );
+    setPreview(selectedFiles.map((selectedFile) => URL.createObjectURL(selectedFile)));
 
     setResult(null);
     setPestResult(null);
@@ -974,10 +679,8 @@ function App() {
     const formData =
       new FormData();
 
-    formData.append(
-      "file",
-      file
-    );
+    selectedFiles.forEach((selectedFile) => formData.append("files", selectedFile));
+    formData.append("language", language || "en");
 
     try {
 
@@ -996,11 +699,7 @@ function App() {
       const diagnosis =
         response.data.diagnosis;
 
-      // Store original so language can switch back
-      setResult({
-        ...diagnosis,
-        _original: diagnosis,
-      });
+      setResult(diagnosis);
 
       // Reload history
       await loadHistory();
@@ -1050,6 +749,7 @@ function App() {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("language", language || "en");
 
     try {
       const response = await axios.post(
@@ -1089,6 +789,7 @@ function App() {
   const chooseAnother = () => {
 
     setFile(null);
+    setSelectedFiles([]);
     setPreview(null);
     setResult(null);
     setPestResult(null);
@@ -1158,12 +859,6 @@ const deleteDiagnosis = async (id) => {
       )
     );
 
-    // Remove from translated history
-    setTranslatedHistory((previous) =>
-      previous.filter(
-        (item) => item.id !== id
-      )
-    );
 
     // If currently viewing this diagnosis,
     // close the detail view.
@@ -1225,7 +920,6 @@ const deleteDiagnosis = async (id) => {
       );
 
       setHistory([]);
-      setTranslatedHistory([]);
       setSelectedDiagnosis(null);
       setResult(null);
 
@@ -1273,6 +967,7 @@ const deleteDiagnosis = async (id) => {
   const changeMode = (newMode) => {
     setMode(newMode);
     setFile(null);
+    setSelectedFiles([]);
     setPreview(null);
     setResult(null);
     setPestResult(null);
@@ -1295,6 +990,20 @@ const deleteDiagnosis = async (id) => {
   const displayHistory = history;
 
 
+  // First-launch: language must be selected before anything else
+  if (!hasSelectedLanguage) {
+    return (
+      <LanguageSelect
+        onLanguageSelected={() => setHasSelectedLanguage(true)}
+      />
+    );
+  }
+
+  // Not logged in: show auth (register mode for new users, login for returning)
+  if (!authUser) {
+    return <Auth onLogin={handleLogin} initialMode="register" />;
+  }
+
   // ==========================================================
   // RENDER
   // ==========================================================
@@ -1308,107 +1017,111 @@ const deleteDiagnosis = async (id) => {
 
       <header className="navbar">
 
+        {/* BRAND */}
         <div className="brand">
-
           <span className="logo">
-            🌱
+            <img
+              src="/agromitr-logo.png"
+              alt="AgroMitr"
+            />
           </span>
-
-          <span>
-            AgroMitR
-          </span>
-
+          <span>AgroMitR</span>
         </div>
 
+
+        {/* MAIN NAVIGATION */}
         <nav className="main-tabs" aria-label="Main navigation">
-          <button type="button" className={activeTab === "home" ? "main-tab active" : "main-tab"} onClick={() => changeTab("home")}><span>🏠</span> Home</button>
-          <button type="button" className={activeTab === "crop-health" ? "main-tab active" : "main-tab"} onClick={() => changeTab("crop-health")}><span>🔬</span> Crop Health</button>
-          <button type="button" className={activeTab === "weather" ? "main-tab active" : "main-tab"} onClick={() => changeTab("weather")}><span>🌦️</span> Weather</button>
-          <button type="button" className={activeTab === "chat" ? "main-tab active" : "main-tab"} onClick={() => changeTab("chat")}><span>🤖</span> AI Chat</button>
+
+          <button
+            type="button"
+            className={activeTab === "home" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("home")}
+          >
+            <span>🏠</span>
+            {pageText.home}
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "crops" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("crops")}
+          >
+            <span>🌱</span>
+            {pageText.crops}
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "crop-health" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("crop-health")}
+          >
+            <span>🔬</span>
+            {pageText.health}
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "weather" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("weather")}
+          >
+            <span>🌦️</span>
+            {pageText.weather}
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "chat" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("chat")}
+          >
+            <span>🤖</span>
+            {pageText.chat}
+          </button>
+
+          <button
+            type="button"
+            className={activeTab === "settings" ? "main-tab active" : "main-tab"}
+            onClick={() => changeTab("settings")}
+          >
+            <span>⚙️</span>
+            {t("settings", {}, "Settings")}
+          </button>
+
         </nav>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "18px",
-          }}
-        >
 
-          {/* LANGUAGE */}
+        {/* USER AREA */}
+        <div className="nav-user-area">
 
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
+            className="nav-user"
+            onClick={() => changeTab("settings")}
+            style={{ cursor: "pointer" }}
+            title={t("settings", {}, "Settings")}
           >
 
-            <span
-              style={{
-                fontSize: "13px",
-                color: "#657066",
-              }}
-            >
-              🌐
-            </span>
+            <div className="nav-user-avatar">
+              {authUser?.name?.charAt(0)?.toUpperCase() || "U"}
+            </div>
 
-            <select
-              value={language}
-              onChange={
-                handleLanguageChange
-              }
-              disabled={translating}
-              style={{
-                padding:
-                  "8px 12px",
-                border:
-                  "1px solid #dfe7df",
-                borderRadius:
-                  "10px",
-                background:
-                  "white",
-                cursor:
-                  translating
-                    ? "wait"
-                    : "pointer",
-                fontSize:
-                  "13px",
-                outline:
-                  "none",
-              }}
-            >
+            <div className="nav-user-info">
+              <span className="nav-user-name">
+                {authUser?.name || "User"}
+              </span>
 
-              {LANGUAGES.map(
-                (lang) => (
-
-                  <option
-                    key={lang.code}
-                    value={lang.code}
-                  >
-                    {lang.name}
-                  </option>
-
-                )
-              )}
-
-            </select>
+              <span className="nav-user-role">
+                {t("farmer", {}, "Farmer")}
+              </span>
+            </div>
 
           </div>
 
-
-          {/* SYSTEM STATUS */}
-
-          <div className="nav-status">
-
-            <span className="status-dot"></span>
-
-            {translating
-              ? text.translating
-              : text.systemOnline}
-
-          </div>
+          <button
+            type="button"
+            className="nav-logout"
+            onClick={handleLogout}
+          >
+            {t("logout", {}, "Logout")}
+          </button>
 
         </div>
 
@@ -1424,22 +1137,22 @@ const deleteDiagnosis = async (id) => {
               <div className="dashboard-welcome">
                 <div className="dashboard-kicker">
                   <span className="status-dot"></span>
-                  FARM OVERVIEW
+                  {pageText.farmOverview}
                 </div>
-                <h1>Your farm, at a glance.</h1>
+                <h1>{pageText.farmTitle}</h1>
                 <p className="dashboard-subtitle">
-                  Keep track of crop health, recent problems and the actions that need your attention.
+                  {pageText.farmSubtitle}
                 </p>
               </div>
 
               <div className="dashboard-actions">
                 <button type="button" className="dashboard-action secondary" onClick={() => changeTab("weather")}>
                   <span>🌦️</span>
-                  Weather
+                  {pageText.weather}
                 </button>
                 <button type="button" className="dashboard-action primary" onClick={() => changeTab("crop-health")}>
                   <span>＋</span>
-                  New health check
+                  {pageText.newHealthCheck}
                 </button>
               </div>
             </div>
@@ -1447,55 +1160,209 @@ const deleteDiagnosis = async (id) => {
             <div className="stat-grid dashboard-stat-grid">
               <div className="stat-card dashboard-stat-card">
                 <div className="stat-icon green">🌱</div>
-                <div><strong>{cropRecords.length}</strong><small>Tracked crops</small></div>
+                <div><strong>{crops.length}</strong><small>{pageText.trackedCrops}</small></div>
               </div>
               <div className="stat-card dashboard-stat-card">
                 <div className="stat-icon blue">🩺</div>
-                <div><strong>{history.length}</strong><small>Health checks</small></div>
+                <div><strong>{history.length}</strong><small>{pageText.healthChecks}</small></div>
               </div>
               <div className="stat-card dashboard-stat-card">
                 <div className="stat-icon amber">⚠️</div>
-                <div><strong>{history.filter((item) => ["severe", "high"].includes(String(item.severity || "").toLowerCase())).length}</strong><small>Needs attention</small></div>
+                <div><strong>{history.filter((item) => ["severe", "high"].includes(String(item.severity || "").toLowerCase())).length}</strong><small>{pageText.needsAttention}</small></div>
               </div>
               <div className="stat-card dashboard-stat-card">
-                <div className="stat-icon purple">🤖</div>
-                <div><strong>AI</strong><small>Farm assistant</small></div>
+                <div className="stat-icon amber">⚠️</div>
+                <div><strong>{history.filter((item) => ["moderate", "medium"].includes(String(item.severity || "").toLowerCase())).length}</strong><small>{pageText.monitorClosely}</small></div>
               </div>
             </div>
+
+            {/* =========================================================
+                YOUR CROPS — HOME SUMMARY
+                ========================================================= */}
+
+            <section className="home-crops-summary">
+
+              <div className="home-crops-summary-header">
+
+                <div>
+                  <span className="home-section-eyebrow">
+                    {pageText.cropMonitoring}
+                  </span>
+
+                  <h2>{pageText.yourCrops}</h2>
+
+                  <p>
+                    {pageText.cropSummary}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="home-view-crops-button"
+                  onClick={() => changeTab("crops")}
+                >
+                  {pageText.viewAllCrops} →
+                </button>
+
+              </div>
+
+              {crops.length === 0 ? (
+
+                <div className="home-no-crops">
+
+                  <div className="home-no-crops-icon">
+                    🌱
+                  </div>
+
+                  <div>
+                    <strong>{pageText.noCrops}</strong>
+
+                    <p>
+                      {pageText.addCropsPrompt}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => changeTab("crops")}
+                  >
+                    {pageText.addCrop}
+                  </button>
+
+                </div>
+
+              ) : (
+
+                <div className="home-crops-grid">
+
+                  {crops.slice(0, 3).map((crop) => (
+
+                    <div
+                      className="home-crop-card"
+                      key={crop.id}
+                    >
+
+                      <div className="home-crop-card-top">
+
+                        <div className="home-crop-icon">
+                          🌱
+                        </div>
+
+                        <div className="home-crop-name">
+
+                          <h3>
+                            {crop.crop_name || pageText.unnamedCrop}
+                          </h3>
+
+                          {crop.variety && (
+                            <span>
+                              {crop.variety}
+                            </span>
+                          )}
+
+                        </div>
+
+                      </div>
+
+                      <div className="home-crop-info">
+
+                        <div>
+                            <small>{pageText.area}</small>
+
+                          <strong>
+                            {crop.area || "—"}{" "}
+                            {getAreaUnitLabel(crop.area_unit, pageText)}
+                          </strong>
+                        </div>
+
+                        <div>
+                            <small>{pageText.growingFor}</small>
+
+                          <strong>
+                            {crop.days_since_planted != null
+                              ? `${crop.days_since_planted} ${pageText.days || "days"}`
+                              : "—"}
+                          </strong>
+                        </div>
+
+                        <div>
+                            <small>{pageText.location}</small>
+
+                          <strong>
+                            {crop.location || pageText.notProvided || "Not provided"}
+                          </strong>
+                        </div>
+
+                      </div>
+
+                      <div className="home-crop-card-footer">
+
+                        <span>
+                          {pageText.planted}{" "}
+                          {crop.planted_date
+                            ? new Date(
+                                crop.planted_date
+                              ).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => changeTab("crops")}
+                        >
+                          {pageText.view || "View"} →
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </section>
 
             <div className="dashboard-main-grid">
 
               <div className="dashboard-panel crops-panel">
                 <div className="panel-heading dashboard-panel-heading">
                   <div>
-                    <p className="eyebrow">YOUR FARM</p>
-                    <h2>My Crops</h2>
+                    <p className="eyebrow">{pageText.healthStatus}</p>
+                    <h2>{pageText.cropsChecked}</h2>
                   </div>
                   <button type="button" className="text-button" onClick={() => changeTab("crop-health")}>
-                    Health check →
+                    {pageText.healthCheck} →
                   </button>
                 </div>
 
                 {cropRecords.length === 0 ? (
                   <div className="dashboard-empty redesigned-empty">
                     <div className="empty-illustration">🌱</div>
-                    <h3>Start building your farm record</h3>
+                    <h3>{pageText.startRecord}</h3>
                     <p>
-                      Analyze a crop image and AgroMitR will automatically start tracking the crop and its health history here.
+                      {pageText.healthRecordPrompt}
                     </p>
                     <button type="button" className="primary-small" onClick={() => changeTab("crop-health")}>
-                      Analyze first crop
+                      {pageText.newHealthCheck}
                     </button>
                   </div>
                 ) : (
                   <div className="farm-crop-grid">
-                    {cropRecords.slice(0, 6).map((item, index) => {
+                    {displayHistory.slice(0, 6).map((item, index) => {
                       const severity = String(item.severity || "unknown").toLowerCase();
+
                       const healthLabel = severity === "severe" || severity === "high"
-                        ? "Needs attention"
+                        ? pageText.needsAttention
                         : severity === "moderate" || severity === "medium"
-                          ? "Monitor closely"
-                          : "Looks good";
+                          ? pageText.monitorClosely
+                          : pageText.looksGood;
                       return (
                         <button
                           type="button"
@@ -1506,12 +1373,14 @@ const deleteDiagnosis = async (id) => {
                           <div className={`farm-crop-avatar crop-avatar-${index % 5}`}>🌿</div>
                           <div className="farm-crop-body">
                             <div className="farm-crop-name-row">
-                              <strong>{item.crop || "Unknown crop"}</strong>
+                              <strong>{item.crop || text.unknownCrop}</strong>
                               <span className={`health-badge ${severity}`}>{healthLabel}</span>
                             </div>
-                            <span className="farm-crop-problem">{item.diagnosis || "No diagnosis recorded"}</span>
+                            <span className="farm-crop-problem">
+                              {item.diagnosis || text.noDiagnosis}
+                            </span>
                             <div className="farm-crop-meta">
-                              <span>Last checked</span>
+                              <span>{pageText.lastChecked}</span>
                               <strong>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}</strong>
                             </div>
                           </div>
@@ -1526,8 +1395,8 @@ const deleteDiagnosis = async (id) => {
               <div className="dashboard-panel activity-panel redesigned-activity-panel">
                 <div className="panel-heading dashboard-panel-heading">
                   <div>
-                    <p className="eyebrow">TRACK RECORD</p>
-                    <h2>Recent Activity</h2>
+                    <p className="eyebrow">{pageText.trackRecord}</p>
+                    <h2>{pageText.recentActivity}</h2>
                   </div>
                   <span className="activity-count">{history.length}</span>
                 </div>
@@ -1535,11 +1404,11 @@ const deleteDiagnosis = async (id) => {
                 {history.length === 0 ? (
                   <div className="activity-empty">
                     <span>◷</span>
-                    <p>Your diagnosis activity will appear here.</p>
+                    <p>{pageText.noActivity}</p>
                   </div>
                 ) : (
                   <div className="timeline-list">
-                    {displayHistory.slice(0, 6).map((item, index) => (
+                    {displayHistory.slice(0, 6).map((item) => (
                       <button
                         type="button"
                         className="timeline-item"
@@ -1569,28 +1438,697 @@ const deleteDiagnosis = async (id) => {
               <div className="dashboard-insight-card">
                 <div className="insight-icon">💡</div>
                 <div>
-                  <p className="eyebrow">AgroMitR INSIGHT</p>
-                  <h3>Stay ahead, not just react.</h3>
+                  <p className="eyebrow">{pageText.insight}</p>
+                  <h3>{pageText.insightTitle}</h3>
                   <p>
-                    Combine crop health records with weather and pest observations to plan the next farm action.
+                    {pageText.insightText}
                   </p>
                 </div>
-                <button type="button" onClick={() => changeTab("weather")}>Plan with weather →</button>
+                <button type="button" onClick={() => changeTab("weather")}>{pageText.planWeather} →</button>
               </div>
 
               <div className="dashboard-quick-card">
                 <div>
-                  <p className="eyebrow">QUICK ACTION</p>
-                  <h3>Need help with your crop?</h3>
+                  <p className="eyebrow">{pageText.quickAction}</p>
+                  <h3>{pageText.needHelp}</h3>
                 </div>
                 <button type="button" onClick={() => changeTab("chat")}>
-                  Ask AgroMitR <span>→</span>
+                  {pageText.ask} <span>→</span>
                 </button>
               </div>
             </div>
 
           </section>
         )}
+
+        {activeTab === "crops" && (
+          <section className="your-crops-page">
+
+            <div className="your-crops-header">
+              <div>
+                <span className="your-crops-eyebrow">
+                  {pageText.cropMonitoring}
+                </span>
+
+                <h1>{pageText.yourCrops}</h1>
+
+                <p>
+                  {pageText.cropSummary}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="add-crop-button"
+                onClick={openNewCropForm}
+              >
+                <span>＋</span>
+                {pageText.addCrop}
+              </button>
+            </div>
+
+            <div className="crop-overview">
+
+              <div className="crop-overview-card">
+                <span className="crop-overview-icon">🌱</span>
+                <div>
+                  <strong>{crops.length}</strong>
+                  <span>{pageText.trackedCrops}</span>
+                </div>
+              </div>
+
+              <div className="crop-overview-card">
+                <span className="crop-overview-icon">📅</span>
+                <div>
+                  <strong>
+                    {crops.filter(
+                      (crop) => crop.planted_date
+                    ).length}
+                  </strong>
+                  <span>{pageText.activeCrops}</span>
+                </div>
+              </div>
+
+              <div className="crop-overview-card">
+                <span className="crop-overview-icon">📍</span>
+                <div>
+                  <strong>
+                    {
+                      new Set(
+                        crops
+                          .map((crop) => crop.location)
+                          .filter(Boolean)
+                      ).size
+                    }
+                  </strong>
+                  <span>{pageText.locations}</span>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="your-crops-section">
+
+              <div className="your-crops-section-header">
+                <div>
+                  <h2>{pageText.allCrops}</h2>
+                  <p>
+                    {pageText.cropInfo}
+                  </p>
+                </div>
+
+                {crops.length > 0 && (
+                  <span className="crop-count">
+                    {crops.length}{" "}
+                    {crops.length === 1
+                      ? pageText.crop
+                      : pageText.cropsLabel}
+                  </span>
+                )}
+              </div>
+
+              {crops.length === 0 ? (
+
+                <div className="no-crops-card">
+
+                  <div className="no-crops-icon">
+                    🌱
+                  </div>
+
+                  <h3>{pageText.noCropsAdded}</h3>
+
+                  <p>
+                    {pageText.firstCropPrompt}
+                  </p>
+
+                  <button
+                    type="button"
+                    className="add-crop-empty-button"
+                    onClick={openNewCropForm}
+                  >
+                    ＋ {pageText.addCrop}
+                  </button>
+
+                </div>
+
+              ) : (
+
+                <div className="crops-grid">
+
+                  {crops.map((crop) => {
+
+                    const plantedDate = crop.planted_date
+                      ? new Date(crop.planted_date)
+                      : null;
+
+                    const daysSincePlanting =
+                      plantedDate &&
+                      !Number.isNaN(plantedDate.getTime())
+                        ? Math.max(
+                            0,
+                            Math.floor(
+                              (
+                                new Date() -
+                                plantedDate
+                              ) /
+                                (1000 * 60 * 60 * 24)
+                            )
+                          )
+                        : null;
+
+                    return (
+                      <article
+                        className="crop-card"
+                        key={crop.id}
+                      >
+
+                        <div className="crop-card-top">
+
+                          <div className="crop-card-icon">
+                            🌱
+                          </div>
+
+                          <div className="crop-card-title">
+                            <h3>
+                              {crop.crop_name || pageText.unnamedCrop}
+                            </h3>
+
+                            {crop.variety && (
+                              <span>
+                                {crop.variety}
+                              </span>
+                            )}
+                          </div>
+
+                        </div>
+
+                        <div className="crop-card-details">
+
+                          <div className="crop-detail">
+                            <span>🌾</span>
+                            <div>
+                              <small>{pageText.area}</small>
+                              <strong>
+                                {crop.area || "—"}{" "}
+                                {getAreaUnitLabel(crop.area_unit, pageText)}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="crop-detail">
+                            <span>📅</span>
+                            <div>
+                              <small>{pageText.growingFor}</small>
+                              <strong>
+                                {daysSincePlanting !== null
+                                  ? `${daysSincePlanting} ${pageText.days || "days"}`
+                                  : "—"}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="crop-detail">
+                            <span>📍</span>
+                            <div>
+                              <small>{pageText.location}</small>
+                              <strong>
+                                {crop.location || pageText.notProvided}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="crop-detail">
+                            <span>💧</span>
+                            <div>
+                              <small>{pageText.irrigation}</small>
+                              <strong>
+                                {crop.irrigation_type || pageText.notProvided}
+                              </strong>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        <div className="crop-card-footer">
+
+                          <div>
+                            <small>{pageText.planted}</small>
+                            <strong>
+                              {crop.planted_date
+                                ? new Date(
+                                    crop.planted_date
+                                  ).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    }
+                                  )
+                                : "—"}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <small>{pageText.harvest}</small>
+                            <strong>
+                              {crop.expected_harvest_date
+                                ? new Date(
+                                    crop.expected_harvest_date
+                                  ).toLocaleDateString(
+                                    "en-IN",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    }
+                                  )
+                                : pageText.notSet}
+                            </strong>
+                          </div>
+
+                        </div>
+
+                        {crop.notes && (
+                          <div className="crop-card-notes">
+                            <span>📝</span>
+                            <p>{crop.notes}</p>
+                          </div>
+                        )}
+
+                        <div className="crop-card-actions">
+                          <button
+                            type="button"
+                            className="crop-edit-button"
+                            onClick={() =>
+                              openCropEditor(
+                                crops.find((item) => item.id === crop.id) || crop
+                              )
+                            }
+                          >
+                            {pageText.editCrop}
+                          </button>
+                          <button
+                            type="button"
+                            className="crop-delete-button"
+                            onClick={() => handleDeleteCrop(crop.id)}
+                          >
+                            {pageText.delete}
+                          </button>
+                        </div>
+
+                      </article>
+                    );
+                  })}
+
+                </div>
+
+              )}
+
+            </div>
+
+            {showAddCrop && (
+              <div className="crop-form-overlay">
+
+                <div className="crop-form-modal">
+
+                  <div className="crop-form-header">
+
+                    <div>
+                      <span className="your-crops-eyebrow">
+                        {editingCropId ? pageText.editCrop : pageText.newCrop}
+                      </span>
+
+                      <h2>{editingCropId ? pageText.editCropTitle : pageText.addCropTitle}</h2>
+
+                      <p>
+                        {editingCropId
+                          ? pageText.editCropDescription
+                          : pageText.addCropDescription}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="crop-form-close"
+                      onClick={() => { setShowAddCrop(false); setEditingCropId(null); }}
+                    >
+                      ×
+                    </button>
+
+                  </div>
+
+                  <form
+                    className="crop-form"
+                    onSubmit={handleAddCrop}
+                  >
+
+                    {/* BASIC INFORMATION */}
+
+                    <div className="crop-form-section">
+
+                      <h3>{pageText.cropInformation}</h3>
+
+                      <div className="crop-form-grid">
+
+                        <label>
+                          <span>
+                            {pageText.cropName} <b>*</b>
+                          </span>
+
+                          <input
+                            type="text"
+                            placeholder={pageText.tomatoPlaceholder}
+                            value={cropForm.crop_name}
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                crop_name: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>{pageText.variety}</span>
+
+                          <input
+                            type="text"
+                            placeholder={pageText.varietyPlaceholder}
+                            value={cropForm.variety}
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                variety: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            {pageText.area} <b>*</b>
+                          </span>
+
+                          <div className="crop-area-input">
+
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder={pageText.areaPlaceholder}
+                              value={cropForm.area}
+                              onChange={(e) =>
+                                setCropForm({
+                                  ...cropForm,
+                                  area: e.target.value,
+                                })
+                              }
+                            />
+
+                            <select
+                              value={cropForm.area_unit}
+                              onChange={(e) =>
+                                setCropForm({
+                                  ...cropForm,
+                                  area_unit: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="acre">
+                                {pageText.acre}
+                              </option>
+
+                              <option value="hectare">
+                                {pageText.hectare}
+                              </option>
+
+                              <option value="bigha">
+                                {pageText.bigha}
+                              </option>
+
+                              <option value="guntha">
+                                {pageText.guntha}
+                              </option>
+
+                              <option value="sqft">
+                                {pageText.sqft}
+                              </option>
+                            </select>
+
+                          </div>
+                        </label>
+
+                      </div>
+
+                    </div>
+
+                    {/* GROWTH INFORMATION */}
+
+                    <div className="crop-form-section">
+
+                      <h3>{pageText.growthInformation}</h3>
+
+                      <div className="crop-form-grid">
+
+                        <label>
+                          <span>
+                            {pageText.plantingDate} <b>*</b>
+                          </span>
+
+                          <input
+                            type="date"
+                            value={cropForm.planted_date}
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                planted_date: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+
+                        <label>
+                          <span>
+                            {pageText.expectedHarvest}
+                          </span>
+
+                          <input
+                            type="date"
+                            value={
+                              cropForm.expected_harvest_date
+                            }
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                expected_harvest_date:
+                                  e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+
+                      </div>
+
+                    </div>
+
+                    {/* FIELD INFORMATION */}
+
+                    <div className="crop-form-section">
+
+                      <h3>{pageText.fieldInformation}</h3>
+
+                      <div className="crop-form-grid">
+
+                        <label>
+                          <span>{pageText.location}</span>
+
+                          <input
+                            type="text"
+                            placeholder={pageText.villagePlaceholder}
+                            value={cropForm.location}
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                location: e.target.value,
+                              })
+                            }
+                          />
+
+                          {cropForm.location.trim().length >= 3 &&
+                            (locationLoading || locationSuggestions.length > 0) && (
+                            <div className="location-suggestions" role="listbox">
+                              {locationLoading && <span className="location-loading">{pageText.searching}</span>}
+                              {locationSuggestions.map((suggestion) => (
+                                <button
+                                  type="button"
+                                  key={suggestion.place_id}
+                                  onClick={() => {
+                                    setCropForm({ ...cropForm, location: suggestion.display_name });
+                                    setLocationSuggestions([]);
+                                  }}
+                                >
+                                  {suggestion.display_name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </label>
+
+                        <label>
+                          <span>{pageText.soilType}</span>
+
+                          <select
+                            value={cropForm.soil_type}
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                soil_type: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">
+                              {pageText.selectSoil}
+                            </option>
+
+                            <option value="Loamy">
+                              {pageText.loamy}
+                            </option>
+
+                            <option value="Clay">
+                              {pageText.clay}
+                            </option>
+
+                            <option value="Sandy">
+                              {pageText.sandy}
+                            </option>
+
+                            <option value="Silty">
+                              {pageText.silty}
+                            </option>
+
+                            <option value="Black Soil">
+                              {pageText.blackSoil}
+                            </option>
+
+                            <option value="Red Soil">
+                              {pageText.redSoil}
+                            </option>
+
+                            <option value="Other">
+                              {pageText.other}
+                            </option>
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>{pageText.irrigation}</span>
+
+                          <select
+                            value={
+                              cropForm.irrigation_type
+                            }
+                            onChange={(e) =>
+                              setCropForm({
+                                ...cropForm,
+                                irrigation_type:
+                                  e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">
+                              {pageText.selectIrrigation}
+                            </option>
+
+                            <option value="Rainfed">
+                              {pageText.rainfed}
+                            </option>
+
+                            <option value="Drip">
+                              {pageText.drip}
+                            </option>
+
+                            <option value="Sprinkler">
+                              {pageText.sprinkler}
+                            </option>
+
+                            <option value="Flood">
+                              {pageText.flood}
+                            </option>
+
+                            <option value="Other">
+                              {pageText.other}
+                            </option>
+                          </select>
+                        </label>
+
+                      </div>
+
+                    </div>
+
+                    {/* NOTES */}
+
+                    <div className="crop-form-section">
+
+                      <h3>{pageText.fieldNotes}</h3>
+
+                      <label className="crop-notes-field">
+
+                        <span>
+                          {pageText.notes}
+                        </span>
+
+                        <textarea
+                          rows="4"
+                          placeholder={pageText.notesPlaceholder}
+                          value={cropForm.notes}
+                          onChange={(e) =>
+                            setCropForm({
+                              ...cropForm,
+                              notes: e.target.value,
+                            })
+                          }
+                        />
+
+                      </label>
+
+                    </div>
+
+                    {/* ACTIONS */}
+
+                    <div className="crop-form-actions">
+
+                      <button
+                        type="button"
+                        className="crop-cancel-button"
+                        onClick={() =>
+                          setShowAddCrop(false)
+                        }
+                      >
+                        {pageText.cancel}
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="crop-save-button"
+                        disabled={savingCrop}
+                      >
+                          {savingCrop
+                            ? pageText.save
+                            : editingCropId ? pageText.saveChanges : `🌱 ${pageText.addCrop}`}
+                      </button>
+
+                    </div>
+
+                  </form>
+
+                </div>
+
+              </div>
+            )}
+          </section>  
+        )}
+
         {activeTab === "crop-health" && (
           <>
         {/* ==================================================
@@ -1617,13 +2155,12 @@ const deleteDiagnosis = async (id) => {
                 </p>
 
                 <h1>
-                  Protect your crops
-                  <span> before problems spread.</span>
+                  {pageText.protect}
+                  <span>{pageText.beforeProblems}</span>
                 </h1>
 
                 <p className="crop-health-subtitle">
-                  Choose an analysis type and upload a clear crop image.
-                  AgroMitR will identify visible diseases or pest infestation signs.
+                  {pageText.protectSubtitle}
                 </p>
               </div>
 
@@ -1631,7 +2168,7 @@ const deleteDiagnosis = async (id) => {
 
             <div className="crop-health-status">
               <span className="status-dot"></span>
-              AI analysis ready
+              {pageText.analysisReady}
             </div>
 
           </div>
@@ -1660,22 +2197,21 @@ const deleteDiagnosis = async (id) => {
               <div className="health-tool-content">
 
                 <div className="health-tool-top">
-                  <span>DISEASE</span>
+                  <span>{pageText.disease}</span>
 
                   {mode === "disease" && (
                     <span className="selected-pill">
-                      Selected
+                      {pageText.selected}
                     </span>
                   )}
                 </div>
 
                 <h2>
-                  Crop Disease Detection
+                  {pageText.diseaseTitle}
                 </h2>
 
                 <p>
-                  Identify possible diseases, symptoms,
-                  severity and recommended actions.
+                  {pageText.diseaseDescription}
                 </p>
 
               </div>
@@ -1704,22 +2240,21 @@ const deleteDiagnosis = async (id) => {
               <div className="health-tool-content">
 
                 <div className="health-tool-top">
-                  <span>INFESTATION</span>
+                  <span>{pageText.infestation}</span>
 
                   {mode === "pest" && (
                     <span className="selected-pill">
-                      Selected
+                      {pageText.selected}
                     </span>
                   )}
                 </div>
 
                 <h2>
-                  Pest Infestation Detection
+                  {pageText.pestTitle}
                 </h2>
 
                 <p>
-                  Identify likely pests, infestation signs,
-                  risk level and recommended actions.
+                  {pageText.pestDescription}
                 </p>
 
               </div>
@@ -1745,21 +2280,20 @@ const deleteDiagnosis = async (id) => {
 
                 <div>
                   <span className="workspace-label">
-                    STEP 1
+                    {pageText.stepOne}
                   </span>
 
                   <h2>
-                    Upload an image
+                    {pageText.uploadImage}
                   </h2>
 
                   <p>
-                    Use a clear, well-lit photo of the affected
-                    leaf, plant or pest.
+                    {pageText.uploadDescription}
                   </p>
                 </div>
 
                 <div className="format-badge">
-                  JPG · PNG · WEBP
+                  {pageText.imageFormats}
                 </div>
 
               </div>
@@ -1772,6 +2306,7 @@ const deleteDiagnosis = async (id) => {
                   <input
                     ref={fileInputRef}
                     type="file"
+                    multiple
                     accept="image/jpeg,image/png,image/webp"
                     onChange={handleFileChange}
                   />
@@ -1781,15 +2316,15 @@ const deleteDiagnosis = async (id) => {
                   </div>
 
                   <h3>
-                    Drop your crop image here
+                    {pageText.dropImage}
                   </h3>
 
                   <p>
-                    or click to browse from your device
+                    {pageText.browseImage}
                   </p>
 
                   <span className="upload-hint">
-                    For best results, keep the affected area visible.
+                    {pageText.uploadHint}
                   </span>
 
                 </label>
@@ -1800,16 +2335,21 @@ const deleteDiagnosis = async (id) => {
 
                   <div className="preview-image-wrap">
 
-                    <img
-                      src={preview}
-                      alt="Selected crop"
-                      className="modern-preview-image"
-                    />
+                    <div className="multi-preview-grid">
+                      {preview.map((image, index) => (
+                        <img
+                          key={image}
+                          src={image}
+                          alt={`Selected crop ${index + 1}`}
+                          className="modern-preview-image"
+                        />
+                      ))}
+                    </div>
 
                     <div className="preview-mode-badge">
                       {mode === "pest"
-                        ? "🐛 Pest analysis"
-                        : "🌿 Disease analysis"}
+                        ? `🐛 ${pageText.pestAnalysis}`
+                        : `🌿 ${pageText.diseaseAnalysis}`}
                     </div>
 
                   </div>
@@ -1818,11 +2358,13 @@ const deleteDiagnosis = async (id) => {
 
                     <div>
                       <strong>
-                        {file?.name || "Selected image"}
+                        {selectedFiles.length > 1
+                          ? `${selectedFiles.length} ${pageText.imagesSelected}`
+                          : file?.name || pageText.selectedImage}
                       </strong>
 
                       <span>
-                        Ready for AI analysis
+                        {pageText.readyAnalysis}
                       </span>
                     </div>
 
@@ -1831,7 +2373,7 @@ const deleteDiagnosis = async (id) => {
                       className="change-image-button"
                       onClick={chooseAnother}
                     >
-                      Change image
+                      {pageText.changeImage}
                     </button>
 
                   </div>
@@ -1845,7 +2387,7 @@ const deleteDiagnosis = async (id) => {
                 <div className="modern-error">
                   <span>⚠️</span>
                   <div>
-                    <strong>Analysis could not be completed</strong>
+                    <strong>{pageText.analysisError}</strong>
                     <p>{error}</p>
                   </div>
                 </div>
@@ -1862,17 +2404,16 @@ const deleteDiagnosis = async (id) => {
                 }
                 disabled={
                   !file ||
-                  loading ||
-                  translating
+                  loading
                 }
               >
 
                 <span>
                   {loading
-                    ? "Analyzing..."
+                    ? pageText.analyzing
                     : mode === "pest"
-                      ? "Detect Pest Infestation"
-                      : "Analyze Crop Disease"}
+                      ? pageText.analyzePest
+                      : pageText.analyzeDisease}
                 </span>
 
                 <span className="analyze-arrow">
@@ -1897,11 +2438,11 @@ const deleteDiagnosis = async (id) => {
 
                 <div>
                   <span className="workspace-label">
-                    AI ASSISTED
+                    {pageText.aiAssisted}
                   </span>
 
                   <h3>
-                    What AgroMitR checks
+                    {pageText.whatChecks}
                   </h3>
                 </div>
               </div>
@@ -1912,9 +2453,9 @@ const deleteDiagnosis = async (id) => {
                 <div className="health-check-item">
                   <span>01</span>
                   <div>
-                    <strong>Crop identification</strong>
+                    <strong>{pageText.cropIdentification}</strong>
                     <p>
-                      Detects the crop visible in the image.
+                      {pageText.detectsCrop}
                     </p>
                   </div>
                 </div>
@@ -1923,13 +2464,10 @@ const deleteDiagnosis = async (id) => {
                   <span>02</span>
                   <div>
                     <strong>
-                      {mode === "pest"
-                        ? "Pest & infestation signs"
-                        : "Disease & symptoms"}
+                      {mode === "pest" ? pageText.pestSigns : pageText.diseaseSymptoms}
                     </strong>
                     <p>
-                      Analyzes visible signs to identify
-                      the likely problem.
+                      {pageText.analyzesSigns}
                     </p>
                   </div>
                 </div>
@@ -1937,10 +2475,9 @@ const deleteDiagnosis = async (id) => {
                 <div className="health-check-item">
                   <span>03</span>
                   <div>
-                    <strong>Risk assessment</strong>
+                    <strong>{pageText.riskAssessment}</strong>
                     <p>
-                      Provides confidence and severity or
-                      infestation risk where available.
+                      {pageText.providesRisk}
                     </p>
                   </div>
                 </div>
@@ -1948,9 +2485,9 @@ const deleteDiagnosis = async (id) => {
                 <div className="health-check-item">
                   <span>04</span>
                   <div>
-                    <strong>Action guidance</strong>
+                    <strong>{pageText.actionGuidance}</strong>
                     <p>
-                      Gives practical next steps for the farmer.
+                      {pageText.givesActions}
                     </p>
                   </div>
                 </div>
@@ -1961,9 +2498,7 @@ const deleteDiagnosis = async (id) => {
               <div className="health-safety-note">
                 <span>✓</span>
                 <p>
-                  AI results are recommendations. Consult
-                  an agricultural expert for uncertain or
-                  severe cases.
+                  {pageText.safetyNote}
                 </p>
               </div>
 
@@ -2698,27 +3233,6 @@ const deleteDiagnosis = async (id) => {
           </div>
 
 
-          {/* TRANSLATION STATUS */}
-
-          {translating && (
-
-            <div
-              style={{
-                marginBottom: "15px",
-                padding: "10px 14px",
-                background: "#eef6ee",
-                borderRadius: "10px",
-                color: "#397645",
-                fontSize: "13px",
-                textAlign: "center",
-              }}
-            >
-              {text.translating}
-            </div>
-
-          )}
-
-
           {historyLoading ? (
 
             <div className="history-empty">
@@ -2887,15 +3401,25 @@ const deleteDiagnosis = async (id) => {
         )}
 
         {activeTab === "weather" && (
-          <Weather history={history} />
+          <Weather history={history} labels={pageText} />
         )}
 
         {activeTab === "chat" && (
           <Chat
             history={history}
             currentDiagnosis={mode === "pest" ? pestResult : result}
-            language={language}
             contextRequest={chatContextRequest}
+            labels={pageText}
+            language={language}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <Settings
+            authUser={authUser}
+            onUpdateUser={setAuthUser}
+            crops={crops}
+            onLogout={handleLogout}
           />
         )}
 
@@ -2905,7 +3429,7 @@ const deleteDiagnosis = async (id) => {
       {/* FOOTER */}
 
       <footer>
-        {text.footer}
+        {t("footer", {}, "AgroMitR • Early Detection & Management")}
       </footer>
 
     </div>

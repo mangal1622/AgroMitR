@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -8,8 +8,9 @@ import json
 
 from backend.database import get_db
 from backend.models.diagnosis import Diagnosis
-from backend.services.diagnosis_service import diagnose_image
-from backend.services.translation_service import translate_diagnosis
+from backend.models.user import User
+from backend.services.diagnosis_service import diagnose_images
+from backend.api.routes.auth import get_current_user
 
 
 # ============================================================
@@ -45,11 +46,17 @@ class TranslationRequest(BaseModel):
 # POST /diagnose/
 # ============================================================
 
+# Maximum file size: 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
 @router.post("/")
 async def diagnose(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    files: list[UploadFile] = File(...),
+    language: str = Form("en"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+
 
     # --------------------------------------------------------
     # Validate image type
@@ -61,24 +68,38 @@ async def diagnose(
         "image/webp": ".webp"
     }
 
-    if file.content_type not in allowed_types:
+    if not files or len(files) > 5:
+        raise HTTPException(
+            status_code=400,
+            detail="Upload between 1 and 5 images."
+        )
+
+    if any(file.content_type not in allowed_types for file in files):
         raise HTTPException(
             status_code=400,
             detail="Only JPG, PNG and WEBP images are supported."
         )
 
     # --------------------------------------------------------
+    # Validate file size
+    # --------------------------------------------------------
+
+    for file in files:
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024*1024)}MB."
+            )
+        # Reset file pointer for later reading
+        await file.seek(0)
+
+    # --------------------------------------------------------
     # Generate unique filename
     # --------------------------------------------------------
 
-    extension = allowed_types[file.content_type]
-
-    filename = f"{uuid.uuid4()}{extension}"
-
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        filename
-    )
+    filenames = []
+    file_paths = []
 
     # --------------------------------------------------------
     # Save uploaded image
@@ -86,10 +107,16 @@ async def diagnose(
 
     try:
 
-        contents = await file.read()
+        for file in files:
+            filename = f"{uuid.uuid4()}{allowed_types[file.content_type]}"
+            file_path = os.path.join(UPLOAD_DIR, filename)
+            contents = await file.read()
 
-        with open(file_path, "wb") as buffer:
-            buffer.write(contents)
+            with open(file_path, "wb") as buffer:
+                buffer.write(contents)
+
+            filenames.append(filename)
+            file_paths.append(file_path)
 
     except Exception as e:
 
@@ -106,7 +133,7 @@ async def diagnose(
 
     try:
 
-        result = diagnose_image(file_path)
+        result = diagnose_images(file_paths, language=language)
 
     except Exception as e:
 
@@ -114,8 +141,9 @@ async def diagnose(
 
         # Remove uploaded file if diagnosis failed
         try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
         except Exception:
             pass
 
@@ -142,7 +170,11 @@ async def diagnose(
     try:
 
         diagnosis_record = Diagnosis(
-            filename=filename,
+
+            # 🔐 Link diagnosis to logged-in farmer
+            user_id=current_user.id,
+
+            filename=",".join(filenames),
 
             crop=result.get("crop"),
 
@@ -213,7 +245,8 @@ async def diagnose(
 
     return {
         "id": diagnosis_record.id,
-        "filename": filename,
+        "filename": ",".join(filenames),
+        "filenames": filenames,
         "diagnosis": result
     }
 
@@ -225,11 +258,16 @@ async def diagnose(
 
 @router.get("/")
 def get_diagnoses(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
 
+    # 🔐 Only fetch this farmer's diagnoses
     records = (
         db.query(Diagnosis)
+        .filter(
+            Diagnosis.user_id == current_user.id
+        )
         .order_by(
             Diagnosis.created_at.desc()
         )
@@ -298,9 +336,7 @@ def get_diagnoses(
 
             "explanation": record.explanation,
 
-            "recommended_action": (
-                recommended_action
-            ),
+            "recommended_action": recommended_action,
 
             "needs_expert_review": bool(
                 record.needs_expert_review
@@ -314,6 +350,7 @@ def get_diagnoses(
         "diagnoses": results
     }
 
+
 # ============================================================
 # DELETE ONE DIAGNOSIS
 # DELETE /diagnose/{diagnosis_id}
@@ -322,16 +359,22 @@ def get_diagnoses(
 @router.delete("/{diagnosis_id}")
 def delete_diagnosis(
     diagnosis_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
 
+    # 🔐 Only find a diagnosis belonging to this farmer
     record = (
         db.query(Diagnosis)
-        .filter(Diagnosis.id == diagnosis_id)
+        .filter(
+            Diagnosis.id == diagnosis_id,
+            Diagnosis.user_id == current_user.id
+        )
         .first()
     )
 
     if not record:
+
         raise HTTPException(
             status_code=404,
             detail="Diagnosis record not found."
@@ -343,19 +386,25 @@ def delete_diagnosis(
 
     if record.filename:
 
-        file_path = os.path.join(
-            UPLOAD_DIR,
-            record.filename
-        )
+        # Handle multiple filenames
+        for filename in record.filename.split(","):
 
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except Exception as e:
-            print(
-                "Unable to delete image:",
-                e
+            file_path = os.path.join(
+                UPLOAD_DIR,
+                filename
             )
+
+            try:
+
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+            except Exception as e:
+
+                print(
+                    "Unable to delete image:",
+                    e
+                )
 
     # --------------------------------------------------------
     # Delete database record
@@ -393,15 +442,21 @@ def delete_diagnosis(
 
 @router.delete("/")
 def delete_all_diagnoses(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
 
+    # 🔐 Only fetch this farmer's diagnoses
     records = (
         db.query(Diagnosis)
+        .filter(
+            Diagnosis.user_id == current_user.id
+        )
         .all()
     )
 
     if not records:
+
         return {
             "message": "Diagnosis history is already empty.",
             "deleted_count": 0
@@ -417,31 +472,35 @@ def delete_all_diagnoses(
 
         if record.filename:
 
-            file_path = os.path.join(
-                UPLOAD_DIR,
-                record.filename
-            )
+            for filename in record.filename.split(","):
 
-            try:
-
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-
-            except Exception as e:
-
-                print(
-                    f"Unable to delete image "
-                    f"{record.filename}:",
-                    e
+                file_path = os.path.join(
+                    UPLOAD_DIR,
+                    filename
                 )
 
+                try:
+
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+
+                except Exception as e:
+
+                    print(
+                        f"Unable to delete image "
+                        f"{filename}:",
+                        e
+                    )
+
     # --------------------------------------------------------
-    # Delete database records
+    # Delete only this farmer's database records
     # --------------------------------------------------------
 
     try:
 
-        db.query(Diagnosis).delete(
+        db.query(Diagnosis).filter(
+            Diagnosis.user_id == current_user.id
+        ).delete(
             synchronize_session=False
         )
 
@@ -465,58 +524,3 @@ def delete_all_diagnoses(
         "message": "All diagnosis history deleted successfully.",
         "deleted_count": deleted_count
     }
-
-# ============================================================
-# TRANSLATE DIAGNOSIS
-# POST /diagnose/translate/
-# ============================================================
-
-@router.post("/translate/")
-async def translate(
-    request: TranslationRequest
-):
-
-    # --------------------------------------------------------
-    # Validate language
-    # --------------------------------------------------------
-
-    if not request.language:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Language is required."
-        )
-
-    # --------------------------------------------------------
-    # Translate diagnosis
-    # --------------------------------------------------------
-
-    try:
-
-        translated = translate_diagnosis(
-            request.diagnosis,
-            request.language
-        )
-
-        return {
-            "diagnosis": translated
-        }
-
-    except ValueError as e:
-
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
-
-    except Exception as e:
-
-        print(
-            "Translation error:",
-            e
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to translate diagnosis."
-        )
