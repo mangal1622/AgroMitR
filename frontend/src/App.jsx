@@ -251,7 +251,20 @@ function App() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState("disease");
-  const [activeTab, setActiveTab] = useState("home");
+  const validTabs = ["home", "crops", "crop-health", "weather", "chat", "settings"];
+  const getInitialTab = () => {
+    try {
+      const saved = localStorage.getItem("agromitr_active_tab");
+      if (saved && validTabs.includes(saved)) {
+        return saved;
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return "home";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [pestResult, setPestResult] = useState(null);
 
   const [result, setResult] = useState(null);
@@ -265,7 +278,10 @@ function App() {
 
   const [error, setError] = useState("");
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const fileInputRef = useRef(null);
+  const diagnosisResultRef = useRef(null);
 
   const [chatContextRequest, setChatContextRequest] = useState(null);
 
@@ -276,14 +292,18 @@ function App() {
   const [locationLoading, setLocationLoading] = useState(false);
 
   const [authUser, setAuthUser] = useState(() => {
-  const savedUser = localStorage.getItem("agromitr_user");
+    const savedUser = localStorage.getItem("agromitr_user");
+    const savedToken = localStorage.getItem("agromitr_access_token");
 
-    if (!savedUser) return null;
+    if (!savedUser || !savedToken) {
+      return null;
+    }
 
     try {
       return JSON.parse(savedUser);
     } catch {
       localStorage.removeItem("agromitr_user");
+      localStorage.removeItem("agromitr_access_token");
       return null;
     }
   });
@@ -323,6 +343,14 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("agromitr_active_tab", activeTab);
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [activeTab]);
+
   const openContextChat = (type, data) => {
     if (!data) return;
 
@@ -349,14 +377,11 @@ function App() {
   useEffect(() => {
     const loadCrops = async () => {
       try {
-        const response = await fetch(
-          "http://127.0.0.1:8000/crops/",
-          {
-            headers: {
-              ...getAuthHeaders(),
-            },
-          }
-        );
+        const response = await fetch(`${API_URL}/crops/`, {
+          headers: {
+            ...getAuthHeaders(),
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to load crops");
@@ -610,7 +635,12 @@ function App() {
       setHistoryLoading(true);
 
       const response = await axios.get(
-        `${API_URL}/diagnose/`
+        `${API_URL}/diagnose/`,
+        {
+          headers: {
+            ...getAuthHeaders(),
+          },
+        }
       );
 
       const diagnoses =
@@ -631,30 +661,67 @@ function App() {
   };
 
 
-  // ==========================================================
-  // FILE CHANGE
-  // ==========================================================
+// ==========================================================
+// FILE CHANGE
+// ==========================================================
 
-  const handleFileChange = (
-    event
-  ) => {
+const handleImageSelect = (files) => {
+  const fileArray = Array.from(files || []).slice(0, 5);
 
-    const selectedFiles = Array.from(event.target.files || []).slice(0, 5);
+  if (fileArray.length === 0) {
+    return;
+  }
 
-    if (selectedFiles.length === 0) {
-      return;
+  setFile(fileArray[0]);
+  setSelectedFiles(fileArray);
+
+  setPreview(fileArray.map((selectedFile) => URL.createObjectURL(selectedFile)));
+
+  setResult(null);
+  setPestResult(null);
+  setSelectedDiagnosis(null);
+  setError("");
+};
+
+const handleFileChange = (event) => {
+  handleImageSelect(event.target.files);
+};
+
+const handleDragEnter = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setIsDragging(true);
+};
+
+const handleDragOver = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setIsDragging(true);
+};
+
+const handleDragLeave = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  // Only reset if leaving the entire dropzone, not moving between children
+  if (event.currentTarget === event.target || !event.currentTarget.contains(event.relatedTarget)) {
+    setIsDragging(false);
+  }
+};
+
+const handleDrop = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setIsDragging(false);
+
+  const droppedFiles = event.dataTransfer.files;
+  if (droppedFiles && droppedFiles.length > 0) {
+    // Filter for image files only
+    const imageFiles = Array.from(droppedFiles).filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length > 0) {
+      handleImageSelect(imageFiles);
     }
-
-    setFile(selectedFiles[0]);
-    setSelectedFiles(selectedFiles);
-
-    setPreview(selectedFiles.map((selectedFile) => URL.createObjectURL(selectedFile)));
-
-    setResult(null);
-    setPestResult(null);
-    setSelectedDiagnosis(null);
-    setError("");
-  };
+  }
+};
 
 
   // ==========================================================
@@ -690,8 +757,8 @@ function App() {
           formData,
           {
             headers: {
-              "Content-Type":
-                "multipart/form-data",
+              "Content-Type": "multipart/form-data",
+              ...getAuthHeaders(),
             },
           }
         );
@@ -781,6 +848,16 @@ function App() {
       setLoading(false);
     }
   };
+
+  // Auto-scroll to diagnosis result when it appears
+  useEffect(() => {
+    if ((result || pestResult) && diagnosisResultRef.current) {
+      diagnosisResultRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [result, pestResult]);
 
   // ==========================================================
   // CHOOSE ANOTHER IMAGE
@@ -2301,13 +2378,19 @@ const deleteDiagnosis = async (id) => {
 
               {!preview ? (
 
-                <label className="modern-upload-area">
+                <label
+                  className={`modern-upload-area ${isDragging ? "dragging" : ""}`}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
 
                   <input
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handleFileChange}
                   />
 
@@ -2515,7 +2598,7 @@ const deleteDiagnosis = async (id) => {
 
         {displayResult && (
 
-          <section className="result-section">
+          <section className="result-section" ref={diagnosisResultRef}>
 
             <div className="result-header">
 
@@ -2781,12 +2864,12 @@ const deleteDiagnosis = async (id) => {
         )}
 
 
-        {/* ==================================================
-            PEST DETECTION RESULT
-        ================================================== */}
+{/* ==================================================
+             PEST DETECTION RESULT
+         ================================================== */}
 
-        {pestResult && (
-          <section className="result-section pest-result-section">
+         {pestResult && (
+           <section className="result-section pest-result-section" ref={diagnosisResultRef}>
             <div className="result-header">
               <div>
                 <p className="eyebrow">PEST ANALYSIS COMPLETE</p>

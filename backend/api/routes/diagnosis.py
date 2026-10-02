@@ -137,6 +137,7 @@ async def diagnose(
 
     except Exception as e:
 
+        # Log the detailed error for debugging
         print("Diagnosis error:", e)
 
         # Remove uploaded file if diagnosis failed
@@ -147,10 +148,18 @@ async def diagnose(
         except Exception:
             pass
 
-        raise HTTPException(
-            status_code=500,
-            detail="Unable to diagnose the uploaded image."
-        )
+        # Determine if the error is due to an invalid model
+        error_message = str(e).lower()
+        if "model_not_found" in error_message or "model" in error_message and "not found" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail="Configured Groq model not found or inaccessible."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Unable to diagnose the uploaded image."
+            )
 
     # --------------------------------------------------------
     # Validate AI response

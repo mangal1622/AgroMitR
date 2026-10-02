@@ -4,12 +4,12 @@ import mimetypes
 
 from groq import Groq
 
-from backend.config import GROQ_API_KEY
+from backend.config import GROQ_API_KEY, GROQ_VISION_MODEL
 
 
 client = Groq(api_key=GROQ_API_KEY)
 
-MODEL = "qwen/qwen3.6-27b"
+MODEL = GROQ_VISION_MODEL
 
 
 SYSTEM_PROMPT = """

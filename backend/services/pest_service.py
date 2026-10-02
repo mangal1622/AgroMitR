@@ -10,8 +10,10 @@ from groq import Groq
 # GROQ CLIENT
 # ============================================================
 
+from backend.config import GROQ_API_KEY, GROQ_VISION_MODEL
+
 client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
+    api_key=GROQ_API_KEY
 )
 
 
@@ -19,7 +21,7 @@ client = Groq(
 # MODEL
 # ============================================================
 
-MODEL_NAME = "qwen/qwen3.6-27b"
+MODEL_NAME = GROQ_VISION_MODEL
 
 
 # ============================================================

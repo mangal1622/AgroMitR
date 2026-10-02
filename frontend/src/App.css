@@ -1485,6 +1485,16 @@ footer {
     #f8fcf8;
 }
 
+.modern-upload-area.dragging {
+  border-color: #347343;
+  border-style: solid;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(215, 237, 217, 0.95), transparent 36%),
+    #e8f5e9;
+  transform: scale(1.01);
+  box-shadow: 0 8px 32px rgba(52, 115, 67, 0.15);
+}
+
 .modern-upload-area input {
   display: none;
 }
@@ -1769,6 +1779,7 @@ footer {
 
 .result-section {
   box-shadow: 0 10px 30px rgba(30, 55, 35, 0.045);
+  scroll-margin-top: 100px;
 }
 
 .result-main,
