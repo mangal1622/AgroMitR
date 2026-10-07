@@ -8,7 +8,7 @@ import LanguageSelect from "./components/LanguageSelect";
 import Settings from "./components/Settings";
 import { useTranslation } from "./i18n/LanguageContext";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const getAuthToken = () => {
   return localStorage.getItem("agromitr_access_token");
@@ -453,8 +453,8 @@ function App() {
 
       const response = await fetch(
         editingCropId
-          ? `http://127.0.0.1:8000/crops/${editingCropId}`
-          : "http://127.0.0.1:8000/crops/",
+          ? `${API_URL}/crops/${editingCropId}`
+          : `${API_URL}/crops/`,
         {
           method: editingCropId ? "PUT" : "POST",
           headers: {
@@ -500,7 +500,7 @@ function App() {
       await response.json().catch(() => null);
 
       const refreshedResponse = await fetch(
-        "http://127.0.0.1:8000/crops/",
+        `${API_URL}/crops/`,
         {
           headers: {
             ...getAuthHeaders(),
@@ -591,7 +591,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/crops/${cropId}`,
+        `${API_URL}/crops/${cropId}`,
         {
           method: "DELETE",
           headers: {

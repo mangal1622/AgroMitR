@@ -2,15 +2,16 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
+from pathlib import Path
 import os
 import uuid
 import json
 
-from backend.database import get_db
-from backend.models.diagnosis import Diagnosis
-from backend.models.user import User
-from backend.services.diagnosis_service import diagnose_images
-from backend.api.routes.auth import get_current_user
+from database import get_db
+from models.diagnosis import Diagnosis
+from models.user import User
+from services.diagnosis_service import diagnose_images
+from api.routes.auth import get_current_user
 
 
 # ============================================================
@@ -27,9 +28,8 @@ router = APIRouter(
 # UPLOAD DIRECTORY
 # ============================================================
 
-UPLOAD_DIR = "uploads"
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = Path("/tmp/agromitr/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================

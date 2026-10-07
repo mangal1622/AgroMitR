@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from backend.services.weather_service import (
+from services.weather_service import (
     get_weather,
     search_locations,
     get_weather_by_coordinates,
 )
-from backend.models.user import User
-from backend.api.routes.auth import get_current_user
+from models.user import User
+from api.routes.auth import get_current_user
 
 
 router = APIRouter(

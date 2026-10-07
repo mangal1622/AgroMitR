@@ -12,7 +12,8 @@ import bn from "./locales/bn.json";
 import gu from "./locales/gu.json";
 import pa from "./locales/pa.json";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const STORAGE_KEY = "agromitr_language";
 
 export const SUPPORTED_LANGUAGES = [

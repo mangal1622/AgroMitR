@@ -1,7 +1,12 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "sqlite:///./crop_health.db"
+# Use /tmp for SQLite on Vercel (read-only filesystem), local path otherwise
+if os.getenv("VERCEL"):
+    DATABASE_URL = "sqlite:////tmp/crop_health.db"
+else:
+    DATABASE_URL = "sqlite:///./crop_health.db"
 
 engine = create_engine(
     DATABASE_URL,

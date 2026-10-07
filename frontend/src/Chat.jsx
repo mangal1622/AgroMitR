@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import "./Chat.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const STORAGE_KEY = "agromitr_chat_sessions_v2";
 
 const LANGUAGE_NAMES = {

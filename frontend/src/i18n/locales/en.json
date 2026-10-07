@@ -210,6 +210,8 @@
   "startChatContext": "Start a fresh AgroMitr chat with this diagnosis already in context.",
   "startChatPestContext": "Start a fresh AgroMitr chat with this pest detection already in context.",
   "askAgroMitr": "🤖 Ask AgroMitr",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
   "savedDiagnosis": "SAVED DIAGNOSIS",
   "diagnosisDetails": "Diagnosis Details",
   "backHistory": "Back to History",

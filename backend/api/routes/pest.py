@@ -6,15 +6,16 @@ from fastapi import (
     HTTPException,
     Depends,
 )
+from pathlib import Path
 import os
 import uuid
 import json
 
-from backend.services.pest_service import detect_pest
-from backend.database import SessionLocal
-from backend.models.diagnosis import Diagnosis
-from backend.models.user import User
-from backend.api.routes.auth import get_current_user
+from services.pest_service import detect_pest
+from database import SessionLocal
+from models.diagnosis import Diagnosis
+from models.user import User
+from api.routes.auth import get_current_user
 
 
 # ============================================================
@@ -31,12 +32,8 @@ router = APIRouter(
 # UPLOAD DIRECTORY
 # ============================================================
 
-UPLOAD_DIR = "uploads"
-
-os.makedirs(
-    UPLOAD_DIR,
-    exist_ok=True
-)
+UPLOAD_DIR = Path("/tmp/agromitr/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================

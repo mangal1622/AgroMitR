@@ -3,10 +3,10 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from backend.database import SessionLocal
-from backend.models.crop import Crop
-from backend.models.user import User
-from backend.api.routes.auth import get_current_user
+from database import SessionLocal
+from models.crop import Crop
+from models.user import User
+from api.routes.auth import get_current_user
 
 
 router = APIRouter(

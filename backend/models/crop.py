@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Text, ForeignKey
 
-from backend.database import Base
+from database import Base
 
 
 class Crop(Base):

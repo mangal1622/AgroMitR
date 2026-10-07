@@ -7,9 +7,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from pwdlib import PasswordHash
 from sqlalchemy.orm import Session
 
-from backend.config import JWT_SECRET_KEY
-from backend.database import get_db
-from backend.models.user import User
+from config import JWT_SECRET_KEY
+from database import get_db
+from models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer(auto_error=False)
