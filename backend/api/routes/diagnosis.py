@@ -11,7 +11,7 @@ from database import get_db
 from models.diagnosis import Diagnosis
 from models.user import User
 from services.diagnosis_service import diagnose_images
-from api.routes.auth import get_current_user
+from api.routes.auth import get_current_user, get_current_user_optional
 
 
 # ============================================================
@@ -54,7 +54,7 @@ async def diagnose(
     files: list[UploadFile] = File(...),
     language: str = Form("en"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
 
 
@@ -180,8 +180,8 @@ async def diagnose(
 
         diagnosis_record = Diagnosis(
 
-            # 🔐 Link diagnosis to logged-in farmer
-            user_id=current_user.id,
+            # 🔐 Link diagnosis to logged-in farmer if authenticated
+            user_id=current_user.id if current_user else None,
 
             filename=",".join(filenames),
 
